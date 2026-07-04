@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>QR Shield AI - Information Portal & FAQ</title>
+  <meta name="description" content="Learn how QR phishing scams (Quishing) target mobile devices and explore our client-side threat classification protocols.">
+  <link rel="stylesheet" href="assets/css/style.css">
+</head>
+<body>
+  <div class="cyber-grid-overlay"></div>
+
+  <!-- Header Navigation -->
+  <header>
+    <div class="container navbar">
+      <a href="index.html" class="logo-container" id="nav-logo">
+        <div class="logo-icon">
+          <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" stroke="currentColor" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
+            <polyline points="9 11 11 13 15 9" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+          </svg>
+        </div>
+        <span class="logo-text">QR SHIELD<span>.AI</span></span>
+      </a>
+
+      <nav>
+        <ul class="nav-links" id="navbar-menu">
+          <li><a href="index.html">Home</a></li>
+          <li><a href="scanner.html">Scan QR</a></li>
+          <li><a href="history.html">History</a></li>
+          <li><a href="report.html">Report Scam</a></li>
+          <li><a href="about.html">About</a></li>
+        </ul>
+      </nav>
+
+      <div class="nav-actions">
+        <button class="theme-toggle-btn" id="theme-switcher" aria-label="Toggle visual theme" title="Switch Theme"></button>
+        <button class="mobile-menu-btn" aria-label="Toggle navigation menu" id="mobile-hamburger">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="3" y1="12" x2="21" y2="12"></line>
+            <line x1="3" y1="6" x2="21" y2="6"></line>
+            <line x1="3" y1="18" x2="21" y2="18"></line>
+          </svg>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Page Layout -->
+  <main class="container page-container fade-in">
+    <div class="page-header">
+      <h1>Defense Center</h1>
+      <p>Decentralized threat intelligence & educational center for QR code vulnerabilities.</p>
+    </div>
+
+    <!-- About Section -->
+    <div class="about-grid">
+      <!-- Left: Animated SVG illustration -->
+      <div class="about-left" style="display: flex; justify-content: center;">
+        <svg viewBox="0 0 200 200" width="100%" max-width="320" height="auto" style="filter: drop-shadow(0 0 20px rgba(6, 182, 212, 0.25));">
+          <!-- Outer glowing circle -->
+          <circle cx="100" cy="100" r="85" fill="none" stroke="rgba(6,182,212,0.15)" stroke-width="2" />
+          <circle cx="100" cy="100" r="75" fill="none" stroke="rgba(6,182,212,0.3)" stroke-width="1" stroke-dasharray="10 6" style="animation: spin 30s linear infinite;" />
+          
+          <!-- Cyber shield path -->
+          <path d="M100 40 L150 55 V100 C150 140 100 170 100 170 C100 170 50 140 50 100 V55 Z" fill="url(#shield-grad)" stroke="#06b6d4" stroke-width="3" style="animation: float 4s ease-in-out infinite; transform-origin: center;" />
+          
+          <!-- QR matrix pattern inside shield -->
+          <g transform="translate(85, 75) scale(0.6)" fill="#fff" opacity="0.9">
+            <rect x="0" y="0" width="12" height="12"/>
+            <rect x="3" y="3" width="6" height="6" fill="#0f172a"/>
+            <rect x="30" y="0" width="12" height="12"/>
+            <rect x="33" y="3" width="6" height="6" fill="#0f172a"/>
+            <rect x="0" y="30" width="12" height="12"/>
+            <rect x="3" y="33" width="6" height="6" fill="#0f172a"/>
+            <rect x="18" y="18" width="6" height="6"/>
+            <rect x="30" y="30" width="6" height="6"/>
+            <rect x="36" y="24" width="6" height="6"/>
+            <rect x="24" y="36" width="6" height="6"/>
+          </g>
+
+          <defs>
+            <linearGradient id="shield-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stop-color="rgba(6,182,212,0.2)" />
+              <stop offset="100%" stop-color="rgba(59,130,246,0.3)" />
+            </linearGradient>
+          </defs>
+        </svg>
+      </div>
+
+      <!-- Right: Content -->
+      <div class="about-right">
+        <h2>Secure Proxy Defense</h2>
+        <p><strong>QR Shield AI</strong> acts as a heuristic security proxy between physical vectors and your personal details. Rather than launching encoded destinations blindly in your browser, our platform decodes, checks, and rates URLs in a secure browser sandbox.</p>
+        <p>Our core framework evaluates SSL registries, parses redirect queries, expands shortened urls, flags brand keyword spoofing, and checks records against community anti-phishing databases.</p>
+        
+        <div class="features-list">
+          <div class="feature-badge">
+            <div class="feature-badge-icon">🛡️</div>
+            <span class="feature-badge-text">Phishing Shields</span>
+          </div>
+          <div class="feature-badge">
+            <div class="feature-badge-icon">💸</div>
+            <span class="feature-badge-text">UPI Verifier</span>
+          </div>
+          <div class="feature-badge">
+            <div class="feature-badge-icon">📡</div>
+            <span class="feature-badge-text">WiFi Audits</span>
+          </div>
+          <div class="feature-badge">
+            <div class="feature-badge-icon">💻</div>
+            <span class="feature-badge-text">100% Client-side</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- FAQ Accordion section -->
+    <div class="faq-section">
+      <h2 class="faq-title">Defense Knowledge Base</h2>
+      <div class="faq-list">
+        <!-- FAQ 1 -->
+        <div class="faq-item">
+          <button class="faq-question">
+            <span>What is a QR code phishing attack (Quishing)?</span>
+            <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="6 9 12 15 18 9"></polyline>
+            </svg>
+          </button>
+          <div class="faq-answer">
+            <p>QR Phishing, or "Quishing", is a social engineering attack where malicious actors replace legitimate QR codes (such as payment codes at dining tables, parking ticket machines, or digital flyers) with fraudulent stickers. When scanned, these malicious codes redirect targets to fake login portals, banking interfaces, or malware links designed to hijack credentials and steal funds.</p>
+          </div>
+        </div>
+
+        <!-- FAQ 2 -->
+        <div class="faq-item">
+          <button class="faq-question">
+            <span>How does the security engine calculate risk scores?</span>
+            <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="6 9 12 15 18 9"></polyline>
+            </svg>
+          </button>
+          <div class="faq-answer">
+            <p>Our analysis framework runs scanning rules using weighted criteria out of a maximum score of 100:</p>
+            <ul style="margin: 10px 0 10px 20px; list-style-type: square; line-height: 1.5;">
+              <li><strong>Missing SSL Encryption (HTTP):</strong> +25 points</li>
+              <li><strong>Known Link Redirection Shortener (e.g. bit.ly):</strong> +20 points</li>
+              <li><strong>Deceptive Keyword Spoofing (e.g. pay-paypal.xyz):</strong> +25 points</li>
+              <li><strong>Listed Phishing Registries Match:</strong> +40 points</li>
+              <li><strong>Unknown/Untrusted Domain Authority:</strong> +10 points</li>
+            </ul>
+            <p>The total threat index places links into Safe (0-20), Medium (21-50), Suspicious (51-80), or Dangerous (81-100) buckets.</p>
+          </div>
+        </div>
+
+        <!-- FAQ 3 -->
+        <div class="faq-item">
+          <button class="faq-question">
+            <span>Can scanning a QR code infect my phone with malware?</span>
+            <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="6 9 12 15 18 9"></polyline>
+            </svg>
+          </button>
+          <div class="faq-answer">
+            <p>Simply scanning a QR code using modern devices will not download malware directly, as standard web sandboxes isolate initial payloads. However, QR payloads can initiate dangerous automated behaviors, like connecting to an unencrypted public Wi-Fi network that captures your data packets, pre-drafting SMS confirmations to premium bill lines, or tricking you into installing sketchy app APK packages directly from hidden files.</p>
+          </div>
+        </div>
+
+        <!-- FAQ 4 -->
+        <div class="faq-item">
+          <button class="faq-question">
+            <span>Is my camera feed or decoded text private?</span>
+            <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="6 9 12 15 18 9"></polyline>
+            </svg>
+          </button>
+          <div class="faq-answer">
+            <p>Yes. QR Shield AI is a serverless application that operates 100% locally in your web browser environment. Your webcam stream is rendered via HTML5 canvas locally, and all threat analysis evaluations, logs history database, and reported incident records are saved directly in your browser's private LocalStorage. No data is ever transmitted to external trackers.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <!-- Sticky Footer -->
+  <footer>
+    <div class="container footer-content">
+      <ul class="footer-links">
+        <li><a href="index.html">Dashboard</a></li>
+        <li><a href="scanner.html">Secure Scanner</a></li>
+        <li><a href="report.html">Report Scam</a></li>
+        <li><a href="about.html">About project</a></li>
+      </ul>
+      <p>&copy; 2026 QR Shield AI. Built in Planning Mode for Hackathon cybersecurity showcases. Client-side sandbox verification active.</p>
+    </div>
+  </footer>
+
+  <!-- Include Scripts -->
+  <script src="assets/js/utils.js"></script>
+  <!-- Page accordion logic -->
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      const faqQuestions = document.querySelectorAll('.faq-question');
+      
+      faqQuestions.forEach(btn => {
+        btn.addEventListener('click', () => {
+          const item = btn.parentElement;
+          const answer = btn.nextElementSibling;
+          
+          item.classList.toggle('active');
+          
+          if (item.classList.contains('active')) {
+            answer.style.maxHeight = answer.scrollHeight + 'px';
+          } else {
+            answer.style.maxHeight = '0px';
+          }
+        });
+      });
+    });
+  </script>
+</body>
+</html>

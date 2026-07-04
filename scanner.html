@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>QR Shield AI - Secure Scanner & Link Analyzer</title>
+  <meta name="description" content="Scan QR codes using your camera or upload images. Detect malicious links, fake UPI payments, and suspicious domains client-side.">
+  <link rel="stylesheet" href="assets/css/style.css">
+  <!-- HTML5 QR Code CDN script -->
+  <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+</head>
+<body>
+  <!-- Canvas overlay for safe scans confetti -->
+  <canvas id="confetti-canvas"></canvas>
+  <div class="cyber-grid-overlay"></div>
+
+  <!-- Header Navigation -->
+  <header>
+    <div class="container navbar">
+      <a href="index.html" class="logo-container" id="nav-logo">
+        <div class="logo-icon">
+          <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" stroke="currentColor" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
+            <polyline points="9 11 11 13 15 9" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+          </svg>
+        </div>
+        <span class="logo-text">QR SHIELD<span>.AI</span></span>
+      </a>
+
+      <nav>
+        <ul class="nav-links" id="navbar-menu">
+          <li><a href="index.html">Home</a></li>
+          <li><a href="scanner.html">Scan QR</a></li>
+          <li><a href="history.html">History</a></li>
+          <li><a href="report.html">Report Scam</a></li>
+          <li><a href="about.html">About</a></li>
+        </ul>
+      </nav>
+
+      <div class="nav-actions">
+        <button class="theme-toggle-btn" id="theme-switcher" aria-label="Toggle visual theme" title="Switch Theme"></button>
+        <button class="mobile-menu-btn" aria-label="Toggle navigation menu" id="mobile-hamburger">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="3" y1="12" x2="21" y2="12"></line>
+            <line x1="3" y1="6" x2="21" y2="6"></line>
+            <line x1="3" y1="18" x2="21" y2="18"></line>
+          </svg>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Page Layout -->
+  <main class="container page-container fade-in">
+    <div class="page-header">
+      <h1>Secure QR Console</h1>
+      <p>Analyze QR payloads in a secure client-side sandbox before opening them.</p>
+    </div>
+
+    <div class="scanner-grid">
+      <!-- Left Panel: Scanner Feed & Controls -->
+      <div class="scanner-left">
+        <div class="scanner-panel" id="drop-zone" title="Drag and drop a QR image or click to select">
+          <!-- Live View Finder -->
+          <div class="scanner-view-container">
+            <!-- Target camera reader div -->
+            <div id="reader" style="display: none;"></div>
+            
+            <div class="scanner-overlay">
+              <div class="scanner-box">
+                <div class="scan-laser"></div>
+              </div>
+            </div>
+
+            <!-- Static placeholder screen -->
+            <div class="scanner-placeholder" id="scanner-placeholder">
+              <svg fill="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                <rect x="3" y="3" width="6" height="6" rx="1"/>
+                <rect x="15" y="3" width="6" height="6" rx="1"/>
+                <rect x="3" y="15" width="6" height="6" rx="1"/>
+                <rect x="15" y="15" width="6" height="6" rx="1"/>
+                <rect x="10" y="10" width="4" height="4"/>
+                <line x1="1" y1="12" x2="23" y2="12" stroke="currentColor" stroke-width="1.5" stroke-dasharray="4"/>
+              </svg>
+              <h3>Scanner Offline</h3>
+              <p>Start your camera feed or drag and drop a QR image file here to analyze.</p>
+            </div>
+          </div>
+
+          <div class="scanner-controls">
+            <!-- Camera actions -->
+            <button class="btn btn-primary" id="start-camera-btn">
+              <svg class="btn-icon" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none">
+                <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/>
+                <circle cx="12" cy="13" r="4"/>
+              </svg>
+              Start Camera
+            </button>
+            <button class="btn btn-secondary" id="stop-camera-btn" style="display: none; background: rgba(239, 68, 68, 0.1); border-color: rgba(239, 68, 68, 0.3); color: var(--color-red);">
+              <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="4" y="4" width="16" height="16" rx="2" ry="2"></rect>
+              </svg>
+              Stop Camera
+            </button>
+
+            <!-- File Upload actions -->
+            <label class="upload-btn-label" for="file-input">
+              <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                <polyline points="17 8 12 3 7 8"></polyline>
+                <line x1="12" y1="3" x2="12" y2="15"></line>
+              </svg>
+              Upload QR Image
+            </label>
+            <input type="file" id="file-input" accept="image/*">
+          </div>
+        </div>
+      </div>
+
+      <!-- Right Panel: Dynamic Security Analysis Reports -->
+      <div class="scanner-right">
+        <div class="glass-card result-card" id="result-card">
+          <!-- Result Card Header -->
+          <div class="result-header">
+            <span class="result-title">Analysis Log</span>
+            <span class="result-badge badge-safe" id="res-risk-level">Safe Scan</span>
+          </div>
+
+          <!-- Decoded value display block -->
+          <h4 style="margin-bottom: 8px; color: var(--text-muted); font-size: 0.85rem; text-transform: uppercase;">Decoded Content</h4>
+          <div class="result-value" id="res-content">No scan loaded.</div>
+
+          <!-- Risk Score details section -->
+          <div class="risk-meter-container">
+            <!-- Circle Threat Meter -->
+            <div class="risk-gauge-radial">
+              <svg width="90" height="90" class="risk-gauge-circle">
+                <circle cx="45" cy="45" r="35" class="risk-circle-bg" />
+                <circle cx="45" cy="45" r="35" class="risk-circle-fg" id="gauge-fg" />
+              </svg>
+              <div class="risk-score-num" id="gauge-score-num">0<span>Risk</span></div>
+            </div>
+
+            <!-- Risk textual details -->
+            <div class="risk-meter-details">
+              <div class="risk-level-text" id="res-risk-text">Calculating...</div>
+              <div class="risk-level-desc" id="res-risk-desc">Score: 0/100</div>
+              <div class="risk-progress-bar">
+                <div class="risk-progress-fill" id="risk-bar-fill"></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Security checklist details -->
+          <div class="checklist-section">
+            <div class="checklist-title">Security Checklist</div>
+            <div class="checklist-grid" id="security-checklist">
+              <!-- Checklist entries generated via JS -->
+            </div>
+          </div>
+
+          <!-- UPI specific content card (hidden by default) -->
+          <div class="upi-card" id="specialized-upi-card" style="display: none;">
+            <h4 style="font-size: 0.9rem; font-weight: 700; margin-bottom: 12px; color: var(--color-blue); text-transform: uppercase; letter-spacing: 0.5px;">UPI Merchant Profile</h4>
+            <div class="upi-row">
+              <span class="upi-label">Merchant Name</span>
+              <span class="upi-value" id="upi-merchant-name">N/A</span>
+            </div>
+            <div class="upi-row">
+              <span class="upi-label">UPI ID</span>
+              <span class="upi-value" id="upi-id-value">N/A</span>
+            </div>
+            <div class="upi-row">
+              <span class="upi-label">Requested Amount</span>
+              <span class="upi-value" id="upi-amount-value">N/A</span>
+            </div>
+            <div class="upi-row">
+              <span class="upi-label">Verification Status</span>
+              <span class="upi-value" id="upi-status-value" style="font-weight: 800;">N/A</span>
+            </div>
+          </div>
+
+          <!-- AI Explanation Block -->
+          <div class="ai-card">
+            <div class="ai-explanation-text" id="res-ai-explanation">Waiting for scans...</div>
+          </div>
+
+          <!-- Buttons Panel -->
+          <div class="result-actions">
+            <a href="#" target="_blank" class="btn btn-primary" id="action-open-link" style="display: none;">
+              <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path>
+                <polyline points="15 3 21 3 21 9"></polyline>
+                <line x1="10" y1="14" x2="21" y2="3"></line>
+              </svg>
+              Open Link
+            </a>
+            <button class="btn btn-secondary" id="action-report-scam" style="background: rgba(239, 68, 68, 0.05); border-color: rgba(239, 68, 68, 0.15); color: var(--color-red);">
+              <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
+                <line x1="12" y1="9" x2="12" y2="13"></line>
+                <line x1="12" y1="17" x2="12.01" y2="17"></line>
+              </svg>
+              Report Scam
+            </button>
+            <button class="btn btn-secondary" id="action-share" title="Share analysis results">
+              <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"></path>
+                <polyline points="16 6 12 2 8 6"></polyline>
+                <line x1="12" y1="2" x2="12" y2="15"></line>
+              </svg>
+              Share Result
+            </button>
+            <button class="btn btn-secondary" id="reset-scan-btn" title="Reset analysis card">
+              Clear Result
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <!-- Sticky Footer -->
+  <footer>
+    <div class="container footer-content">
+      <ul class="footer-links">
+        <li><a href="index.html">Dashboard</a></li>
+        <li><a href="scanner.html">Secure Scanner</a></li>
+        <li><a href="report.html">Report Scam</a></li>
+        <li><a href="about.html">About project</a></li>
+      </ul>
+      <p>&copy; 2026 QR Shield AI. Built in Planning Mode for Hackathon cybersecurity showcases. Client-side sandbox verification active.</p>
+    </div>
+  </footer>
+
+  <!-- Include Scripts -->
+  <script src="assets/js/utils.js"></script>
+  <script src="assets/js/analysis.js"></script>
+  <script src="assets/js/scanner.js"></script>
+</body>
+</html>

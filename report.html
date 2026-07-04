@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>QR Shield AI - Report Phishing & QR Scams</title>
+  <meta name="description" content="Report suspicious QR codes, fake payments, and phishing links. Help compile our local threat index databases.">
+  <link rel="stylesheet" href="assets/css/style.css">
+</head>
+<body>
+  <div class="cyber-grid-overlay"></div>
+
+  <!-- Header Navigation -->
+  <header>
+    <div class="container navbar">
+      <a href="index.html" class="logo-container" id="nav-logo">
+        <div class="logo-icon">
+          <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" stroke="currentColor" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
+            <polyline points="9 11 11 13 15 9" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+          </svg>
+        </div>
+        <span class="logo-text">QR SHIELD<span>.AI</span></span>
+      </a>
+
+      <nav>
+        <ul class="nav-links" id="navbar-menu">
+          <li><a href="index.html">Home</a></li>
+          <li><a href="scanner.html">Scan QR</a></li>
+          <li><a href="history.html">History</a></li>
+          <li><a href="report.html">Report Scam</a></li>
+          <li><a href="about.html">About</a></li>
+        </ul>
+      </nav>
+
+      <div class="nav-actions">
+        <button class="theme-toggle-btn" id="theme-switcher" aria-label="Toggle visual theme" title="Switch Theme"></button>
+        <button class="mobile-menu-btn" aria-label="Toggle navigation menu" id="mobile-hamburger">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="3" y1="12" x2="21" y2="12"></line>
+            <line x1="3" y1="6" x2="21" y2="6"></line>
+            <line x1="3" y1="18" x2="21" y2="18"></line>
+          </svg>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Page Layout -->
+  <main class="container page-container fade-in">
+    <div class="page-header">
+      <h1>Report Scams</h1>
+      <p>Contribute to our threat intelligence index by cataloging fraudulent URL links or fake QR codes.</p>
+    </div>
+
+    <!-- Scanner Grid (Reused style for consistency) -->
+    <div class="scanner-grid">
+      <!-- Left Column: Form -->
+      <div class="scanner-left">
+        <div class="glass-card form-card">
+          <form id="report-scam-form" novalidate>
+            <!-- Target link / payment ID -->
+            <div class="form-group">
+              <label for="scam-url">Malicious URL / Payee Address</label>
+              <input type="text" class="form-control" id="scam-url" placeholder="e.g. http://paypal-security-login.xyz or upi://pay?pa=..." required>
+            </div>
+
+            <!-- Scam classification category -->
+            <div class="form-group">
+              <label for="scam-reason">Scam Classification</label>
+              <select class="form-control" id="scam-reason" required>
+                <option value="" disabled selected>Select category...</option>
+                <option value="Phishing Website">Phishing Website (Login Impersonation)</option>
+                <option value="Fake Payment QR">Fake Payment QR (Fake Stores)</option>
+                <option value="UPI Fraud">UPI VPA Spoofing (Unauthorized Transfers)</option>
+                <option value="Dangerous WiFi Network">Unsecured WiFi Hotspot</option>
+                <option value="Malware Distribution">Malware Download Portal</option>
+                <option value="Other Scam">Other Social Engineering Trick</option>
+              </select>
+            </div>
+
+            <!-- Short description -->
+            <div class="form-group">
+              <label for="scam-desc">Incident Description</label>
+              <textarea class="form-control" id="scam-desc" placeholder="Describe the scam details (e.g. 'Scanned in a restaurant, requests high payment amount' or 'Impersonates Amazon login screen')" required></textarea>
+            </div>
+
+            <!-- Drag & Drop Attachment Area -->
+            <div class="form-group">
+              <label>Attach Screenshot / QR Image (Optional)</label>
+              <div class="file-drop-area" id="report-drop-area">
+                <div class="file-drop-icon">📁</div>
+                <div class="file-drop-text">Drag screenshot image here or <span>browse files</span></div>
+                <input type="file" id="report-file" accept="image/*" style="display: none;">
+              </div>
+              
+              <!-- File Preview details (hidden by default) -->
+              <div class="file-drop-preview" id="report-preview-container">
+                <img src="" id="report-preview-img" class="file-preview-img" alt="Attached Scan">
+                <div class="file-preview-details">
+                  <div class="file-preview-name" id="report-preview-name">screenshot.png</div>
+                  <div class="file-preview-size" id="report-preview-size">0 KB</div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Action buttons -->
+            <div style="margin-top: 30px;">
+              <button type="submit" class="btn btn-primary" style="width: 100%; justify-content: center;">
+                <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+                  <polyline points="22 4 12 14.01 9 11.01"></polyline>
+                </svg>
+                Submit Incident Report
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+
+      <!-- Right Column: Local reports log list -->
+      <div class="scanner-right">
+        <h3 style="font-size: 1.25rem; font-weight: 700; margin-bottom: 20px; display: flex; align-items: center; gap: 8px;">
+          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="color: var(--color-cyan);"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
+          Your Filed Reports
+        </h3>
+        
+        <!-- Live feed loaded in report.js -->
+        <div id="user-reports-list">
+          <div class="empty-state" style="padding: 30px 20px;">
+            <h3>No Reports Filed Yet</h3>
+            <p>Any malicious links or payment scams you report will be cataloged here for threat tracking.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <!-- Sticky Footer -->
+  <footer>
+    <div class="container footer-content">
+      <ul class="footer-links">
+        <li><a href="index.html">Dashboard</a></li>
+        <li><a href="scanner.html">Secure Scanner</a></li>
+        <li><a href="report.html">Report Scam</a></li>
+        <li><a href="about.html">About project</a></li>
+      </ul>
+      <p>&copy; 2026 QR Shield AI. Built in Planning Mode for Hackathon cybersecurity showcases. Client-side sandbox verification active.</p>
+    </div>
+  </footer>
+
+  <!-- Include Scripts -->
+  <script src="assets/js/utils.js"></script>
+  <script src="assets/js/report.js"></script>
+</body>
+</html>

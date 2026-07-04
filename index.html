@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>QR Shield AI - Cybersecurity Scan Dashboard</title>
+  <meta name="description" content="Protect yourself from phishing websites, fake payment QR codes, and malicious URLs using AI-powered local verification before clicking.">
+  <link rel="stylesheet" href="assets/css/style.css">
+</head>
+<body>
+  <!-- Floating Cyber Background Layers -->
+  <div class="cyber-grid-overlay"></div>
+
+  <!-- Header Navigation -->
+  <header>
+    <div class="container navbar">
+      <a href="index.html" class="logo-container" id="nav-logo">
+        <div class="logo-icon">
+          <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" stroke="currentColor" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
+            <polyline points="9 11 11 13 15 9" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+          </svg>
+        </div>
+        <span class="logo-text">QR SHIELD<span>.AI</span></span>
+      </a>
+
+      <nav>
+        <ul class="nav-links" id="navbar-menu">
+          <li><a href="index.html">Home</a></li>
+          <li><a href="scanner.html">Scan QR</a></li>
+          <li><a href="history.html">History</a></li>
+          <li><a href="report.html">Report Scam</a></li>
+          <li><a href="about.html">About</a></li>
+        </ul>
+      </nav>
+
+      <div class="nav-actions">
+        <button class="theme-toggle-btn" id="theme-switcher" aria-label="Toggle visual theme" title="Switch Theme"></button>
+        <button class="mobile-menu-btn" aria-label="Toggle navigation menu" id="mobile-hamburger">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="3" y1="12" x2="21" y2="12"></line>
+            <line x1="3" y1="6" x2="21" y2="6"></line>
+            <line x1="3" y1="18" x2="21" y2="18"></line>
+          </svg>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Hero Section -->
+  <main class="container hero fade-in">
+    <div class="hero-badge">Cyber Defense Active</div>
+    <h1>Think Before You <span class="gradient-text">Scan</span></h1>
+    <p class="hero-subtitle">Protect yourself from phishing websites, fake payment QR codes, and online fraud. Verify URL payloads instantly using client-side security heuristics.</p>
+    
+    <div class="hero-actions">
+      <a href="scanner.html" class="btn btn-primary" id="hero-scan-btn">
+        <svg class="btn-icon" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+          <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
+          <circle cx="12" cy="13" r="4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        Scan with Camera
+      </a>
+      <a href="scanner.html?action=upload" class="btn btn-secondary" id="hero-upload-btn">
+        <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+          <polyline points="17 8 12 3 7 8"></polyline>
+          <line x1="12" y1="3" x2="12" y2="15"></line>
+        </svg>
+        Upload QR Image
+      </a>
+    </div>
+
+    <!-- Hackathon Security Dashboard Panels -->
+    <div class="dashboard-grid">
+      <div class="glass-card" id="feat-scanner">
+        <div class="card-icon">
+          <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+            <rect x="3" y="3" width="18" height="18" rx="2" fill="none" stroke="currentColor" stroke-width="2"/>
+            <rect x="7" y="7" width="3" height="3" fill="currentColor"/>
+            <rect x="14" y="7" width="3" height="3" fill="currentColor"/>
+            <rect x="7" y="14" width="3" height="3" fill="currentColor"/>
+            <path d="M14 14h3v3h-3z" fill="currentColor"/>
+          </svg>
+        </div>
+        <h3>Secure QR Scanner</h3>
+        <p>Supports live camera capture and QR image file uploads. Instantly decodes link destination, SSID parameters, and recipient UPI handles.</p>
+      </div>
+
+      <div class="glass-card" id="feat-threat">
+        <div class="card-icon">
+          <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+            <circle cx="12" cy="12" r="10" fill="none" stroke="currentColor" stroke-width="2"/>
+            <line x1="12" y1="8" x2="12" y2="12" stroke="currentColor" stroke-width="2"/>
+            <line x1="12" y1="16" x2="12.01" y2="16" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/>
+          </svg>
+        </div>
+        <h3>Heuristic Threat Engine</h3>
+        <p>Runs local analytics checks: SSL validation, URL shortener matching, brand spoofing keywords, domain registers, and blocklist comparisons.</p>
+      </div>
+
+      <div class="glass-card" id="feat-reports">
+        <div class="card-icon">
+          <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" fill="none" stroke="currentColor" stroke-width="2"/>
+            <line x1="12" y1="8" x2="12" y2="12" stroke="currentColor" stroke-width="2"/>
+            <line x1="12" y1="16" x2="12.01" y2="16" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+          </svg>
+        </div>
+        <h3>Scam Incident Desk</h3>
+        <p>Enables users to file phishing complaints, catalog screenshots, and maintain a local repository of reported malicious URLs in browser memory.</p>
+      </div>
+    </div>
+
+    <!-- Rotating Cyber Tips Banner -->
+    <div class="tips-banner" id="dashboard-tips-banner">
+      <div class="tips-icon">💡</div>
+      <div class="tips-content">
+        <div class="tips-title">Cyber Security Tip</div>
+        <div class="tips-text" id="tips-display-field">Never scan unknown QR codes in public places. Always check where the link redirects.</div>
+      </div>
+    </div>
+  </main>
+
+  <!-- Sticky Footer -->
+  <footer>
+    <div class="container footer-content">
+      <ul class="footer-links">
+        <li><a href="index.html">Dashboard</a></li>
+        <li><a href="scanner.html">Secure Scanner</a></li>
+        <li><a href="report.html">Report Scam</a></li>
+        <li><a href="about.html">About project</a></li>
+      </ul>
+      <p>&copy; 2026 QR Shield AI. Built in Planning Mode for Hackathon cybersecurity showcases. Client-side sandbox verification active.</p>
+    </div>
+  </footer>
+
+  <!-- Include Scripts -->
+  <script src="assets/js/utils.js"></script>
+</body>
+</html>

@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>QR Shield AI - Scan History Ledger</title>
+  <meta name="description" content="View and manage previously scanned QR codes and link security assessments. Export reports in JSON format.">
+  <link rel="stylesheet" href="assets/css/style.css">
+</head>
+<body>
+  <div class="cyber-grid-overlay"></div>
+
+  <!-- Header Navigation -->
+  <header>
+    <div class="container navbar">
+      <a href="index.html" class="logo-container" id="nav-logo">
+        <div class="logo-icon">
+          <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" stroke="currentColor" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
+            <polyline points="9 11 11 13 15 9" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+          </svg>
+        </div>
+        <span class="logo-text">QR SHIELD<span>.AI</span></span>
+      </a>
+
+      <nav>
+        <ul class="nav-links" id="navbar-menu">
+          <li><a href="index.html">Home</a></li>
+          <li><a href="scanner.html">Scan QR</a></li>
+          <li><a href="history.html">History</a></li>
+          <li><a href="report.html">Report Scam</a></li>
+          <li><a href="about.html">About</a></li>
+        </ul>
+      </nav>
+
+      <div class="nav-actions">
+        <button class="theme-toggle-btn" id="theme-switcher" aria-label="Toggle visual theme" title="Switch Theme"></button>
+        <button class="mobile-menu-btn" aria-label="Toggle navigation menu" id="mobile-hamburger">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="3" y1="12" x2="21" y2="12"></line>
+            <line x1="3" y1="6" x2="21" y2="6"></line>
+            <line x1="3" y1="18" x2="21" y2="18"></line>
+          </svg>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Page Layout -->
+  <main class="container page-container fade-in">
+    <div class="page-header">
+      <h1>Threat Logs</h1>
+      <p>Audit trail of local scan history, security checklist scores, and threat indicators.</p>
+    </div>
+
+    <!-- History Controls -->
+    <div class="history-controls">
+      <!-- Search Input -->
+      <div class="history-search-input">
+        <svg fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+          <circle cx="11" cy="11" r="8"/>
+          <line x1="21" y1="21" x2="16.65" y2="16.65"/>
+        </svg>
+        <input type="text" id="history-search" placeholder="Search decrypted payloads or types...">
+      </div>
+
+      <!-- Type Filter -->
+      <select class="filter-select" id="filter-type" aria-label="Filter by QR Type">
+        <option value="All">All Types</option>
+        <option value="Website">Websites</option>
+        <option value="UPI">UPI Payments</option>
+        <option value="WiFi">WiFi networks</option>
+        <option value="Email">Emails</option>
+        <option value="SMS">SMS Prompts</option>
+        <option value="Phone">Phone Calls</option>
+        <option value="Contact">Contacts (VCard)</option>
+      </select>
+
+      <!-- Risk Filter -->
+      <select class="filter-select" id="filter-risk" aria-label="Filter by Risk Level">
+        <option value="All">All Risks</option>
+        <option value="Safe">Safe (0-20)</option>
+        <option value="Medium">Medium (21-50)</option>
+        <option value="Suspicious">Suspicious (51-80)</option>
+        <option value="Dangerous">Dangerous (81-100)</option>
+      </select>
+
+      <!-- Clear/Export buttons -->
+      <div class="history-actions-bar">
+        <button class="btn btn-secondary" id="export-history-btn" title="Export logs as JSON file">
+          <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+            <polyline points="7 10 12 15 17 10"></polyline>
+            <line x1="12" y1="15" x2="12" y2="3"></line>
+          </svg>
+          Export JSON
+        </button>
+        <button class="btn btn-secondary" id="clear-history-btn" style="border-color: rgba(239, 68, 68, 0.2); color: var(--color-red);">
+          <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="3 6 5 6 21 6"></polyline>
+            <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+          </svg>
+          Clear History
+        </button>
+      </div>
+    </div>
+
+    <!-- History Logs Table -->
+    <div class="history-table-container" id="history-table-container">
+      <table class="history-table">
+        <thead>
+          <tr>
+            <th>Scan Date</th>
+            <th>Type</th>
+            <th>Threat Index</th>
+            <th>Decoded Value</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody id="history-table-body">
+          <!-- Dynamic entries generated in history.js -->
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Empty State -->
+    <div class="glass-card empty-state" id="history-empty-state" style="display: none;">
+      <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+        <line x1="8" y1="11" x2="16" y2="11"/>
+      </svg>
+      <h3>Security Logs Empty</h3>
+      <p>No scanning activities have been logged yet. Visit the scanning console to analyze your first QR code.</p>
+      <div style="margin-top: 20px;">
+        <a href="scanner.html" class="btn btn-primary">Open Scanner Console</a>
+      </div>
+    </div>
+  </main>
+
+  <!-- Sticky Footer -->
+  <footer>
+    <div class="container footer-content">
+      <ul class="footer-links">
+        <li><a href="index.html">Dashboard</a></li>
+        <li><a href="scanner.html">Secure Scanner</a></li>
+        <li><a href="report.html">Report Scam</a></li>
+        <li><a href="about.html">About project</a></li>
+      </ul>
+      <p>&copy; 2026 QR Shield AI. Built in Planning Mode for Hackathon cybersecurity showcases. Client-side sandbox verification active.</p>
+    </div>
+  </footer>
+
+  <!-- Include Scripts -->
+  <script src="assets/js/utils.js"></script>
+  <script src="assets/js/history.js"></script>
+</body>
+</html>
