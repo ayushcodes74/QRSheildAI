@@ -138,7 +138,7 @@ function handleFormSubmit(e) {
     window.QRShieldUtils.showLoading('Submitting Incident Report...', 'Uploading logs to local repository');
   }
 
-  setTimeout(() => {
+  setTimeout(async () => {
     if (window.QRShieldUtils) {
       window.QRShieldUtils.hideLoading();
     }
@@ -152,14 +152,14 @@ function handleFormSubmit(e) {
     };
     
     if (window.QRShieldUtils && window.QRShieldUtils.saveScamReport) {
-      window.QRShieldUtils.saveScamReport(reportData);
+      await window.QRShieldUtils.saveScamReport(reportData);
       window.QRShieldUtils.showToast('Scam incident reported successfully!', 'success');
       
       // Reset form
       resetReportForm();
       
       // Re-render local user submission lists below
-      renderUserReports();
+      await renderUserReports();
     }
   }, 1500);
 }
@@ -175,13 +175,13 @@ function resetReportForm() {
   attachedScreenshotBase64 = null;
 }
 
-function renderUserReports() {
+async function renderUserReports() {
   const container = document.getElementById('user-reports-list');
   if (!container) return;
   
   let reports = [];
   if (window.QRShieldUtils && window.QRShieldUtils.getScamReports) {
-    reports = window.QRShieldUtils.getScamReports();
+    reports = await window.QRShieldUtils.getScamReports();
   }
   
   if (reports.length === 0) {

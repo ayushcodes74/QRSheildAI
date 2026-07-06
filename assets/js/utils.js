@@ -7,8 +7,26 @@ document.addEventListener('DOMContentLoaded', () => {
   initTheme();
   initMobileMenu();
   initSafetyTips();
-  initNavbarActiveLink();
+  initAuthNavbar(); // Automatically sets up dynamic sign-in links in navbar
+  initPWA();
 });
+
+function initPWA() {
+  // Dynamically attach manifest link tag
+  if (!document.querySelector('link[rel="manifest"]')) {
+    const link = document.createElement('link');
+    link.rel = 'manifest';
+    link.href = 'manifest.json';
+    document.head.appendChild(link);
+  }
+
+  // Register PWA Service Worker
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('service-worker.js')
+      .then(reg => console.log('[PWA] Service Worker active scope:', reg.scope))
+      .catch(err => console.error('[PWA] Service Worker register failure:', err));
+  }
+}
 
 /* ==========================================================================
    Theme Management (Persistent Cyber Dark / Tech Light Toggle)
@@ -243,37 +261,133 @@ const STORAGE_KEYS = {
   REPORTS: 'qr_shield_reports'
 };
 
-function getScanHistory() {
+function initAuthNavbar() {
+  const token = localStorage.getItem('qr_shield_token');
+  const user = JSON.parse(localStorage.getItem('qr_shield_user') || '{}');
+  const navMenu = document.getElementById('navbar-menu');
+  if (!navMenu) return;
+  
+  let html = `
+    <li><a href="index.html">Home</a></li>
+    <li><a href="scanner.html">Scan QR</a></li>
+    <li><a href="history.html">History</a></li>
+    <li><a href="report.html">Report Scam</a></li>
+    <li><a href="about.html">About</a></li>
+  `;
+  
+  if (token && user.email) {
+    if (user.role === 'Admin' || user.role === 'Police') {
+      html += `<li><a href="admin.html">Admin Console</a></li>`;
+    }
+    html += `<li><a href="#" id="auth-logout-btn" style="color: var(--color-red); font-weight: 600;">Logout</a></li>`;
+  } else {
+    html += `<li><a href="login.html" style="color: var(--color-cyan); font-weight: 600;">Sign In</a></li>`;
+  }
+  
+  navMenu.innerHTML = html;
+  initNavbarActiveLink();
+  
+  const logoutBtn = document.getElementById('auth-logout-btn');
+  if (logoutBtn) {
+    logoutBtn.addEventListener('click', (e) => {
+      e.preventDefault();
+      localStorage.removeItem('qr_shield_token');
+      localStorage.removeItem('qr_shield_user');
+      showToast('Logged out successfully', 'info');
+      setTimeout(() => {
+        window.location.replace('index.html');
+      }, 1000);
+    });
+  }
+}
+
+// Local Storage Fallback helpers
+function getLocalScanHistory() {
   try {
     return JSON.parse(localStorage.getItem(STORAGE_KEYS.HISTORY)) || [];
   } catch (e) {
-    console.error('Error reading scan history', e);
     return [];
   }
 }
 
-function addScanToHistory(scanRecord) {
-  const history = getScanHistory();
-  // Generate unique ID based on timestamp
-  const newRecord = {
+function getLocalScamReports() {
+  try {
+    return JSON.parse(localStorage.getItem(STORAGE_KEYS.REPORTS)) || [];
+  } catch (e) {
+    return [];
+  }
+}
+
+// Async API-integrated Helpers
+async function getScanHistory() {
+  const token = localStorage.getItem('qr_shield_token');
+  if (!token) {
+    return getLocalScanHistory();
+  }
+
+  try {
+    const res = await fetch('/scans', {
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+    const data = await res.json();
+    if (res.ok && data.success) {
+      return data.scans.map(s => ({
+        id: s.scanId,
+        timestamp: s.timestamp,
+        type: s.qrType,
+        riskScore: s.riskScore,
+        riskLevel: s.status,
+        content: s.payload
+      }));
+    }
+  } catch (err) {
+    console.error('Fetch scans error:', err);
+  }
+  return getLocalScanHistory();
+}
+
+async function addScanToHistory(scanRecord) {
+  // Save local fallback
+  const localHistory = getLocalScanHistory();
+  const localRecord = {
     id: Date.now().toString(),
     timestamp: new Date().toISOString(),
     ...scanRecord
   };
-  
-  history.unshift(newRecord); // add to front
-  
-  // Keep only the last 100 scans to optimize LocalStorage space
-  if (history.length > 100) {
-    history.pop();
+  localHistory.unshift(localRecord);
+  if (localHistory.length > 100) localHistory.pop();
+  localStorage.setItem(STORAGE_KEYS.HISTORY, JSON.stringify(localHistory));
+
+  // Sync to backend if logged in
+  const token = localStorage.getItem('qr_shield_token');
+  const headers = { 'Content-Type': 'application/json' };
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
   }
-  
-  localStorage.setItem(STORAGE_KEYS.HISTORY, JSON.stringify(history));
-  return newRecord;
+
+  try {
+    await fetch('/scan', {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({
+        payload: scanRecord.content,
+        qrType: scanRecord.type,
+        riskScore: scanRecord.riskScore,
+        status: scanRecord.riskLevel,
+        city: 'Mumbai', // Default region
+        latitude: 19.0760,
+        longitude: 72.8777
+      })
+    });
+  } catch (err) {
+    console.error('Failed to log scan to server:', err);
+  }
+
+  return localRecord;
 }
 
-function deleteScanFromHistory(id) {
-  let history = getScanHistory();
+async function deleteScanFromHistory(id) {
+  let history = getLocalScanHistory();
   history = history.filter(item => item.id !== id);
   localStorage.setItem(STORAGE_KEYS.HISTORY, JSON.stringify(history));
   return history;
@@ -283,25 +397,73 @@ function clearScanHistory() {
   localStorage.setItem(STORAGE_KEYS.HISTORY, JSON.stringify([]));
 }
 
-function getScamReports() {
-  try {
-    return JSON.parse(localStorage.getItem(STORAGE_KEYS.REPORTS)) || [];
-  } catch (e) {
-    console.error('Error reading reported scams', e);
-    return [];
+async function getScamReports() {
+  const token = localStorage.getItem('qr_shield_token');
+  if (!token) {
+    return getLocalScamReports();
   }
+
+  try {
+    const res = await fetch('/reports', {
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+    const data = await res.json();
+    if (res.ok && data.success) {
+      return data.reports.map(r => ({
+        id: r.reportId,
+        timestamp: r.createdAt,
+        url: r.payload,
+        category: r.reason,
+        description: r.description,
+        screenshot: r.screenshot
+      }));
+    }
+  } catch (err) {
+    console.error('Fetch reports error:', err);
+  }
+  return getLocalScamReports();
 }
 
-function saveScamReport(report) {
-  const reports = getScamReports();
-  const newReport = {
+async function saveScamReport(report) {
+  // Save local fallback
+  const localReports = getLocalScamReports();
+  const localRecord = {
     id: Date.now().toString(),
     timestamp: new Date().toISOString(),
     ...report
   };
-  reports.unshift(newReport);
-  localStorage.setItem(STORAGE_KEYS.REPORTS, JSON.stringify(reports));
-  return newReport;
+  localReports.unshift(localRecord);
+  localStorage.setItem(STORAGE_KEYS.REPORTS, JSON.stringify(localReports));
+
+  // Sync to server if authenticated
+  const token = localStorage.getItem('qr_shield_token');
+  if (!token) {
+    console.warn('Anonymous reports not synced with server.');
+    return localRecord;
+  }
+
+  try {
+    await fetch('/report', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      },
+      body: JSON.stringify({
+        payload: report.url,
+        reason: report.category,
+        description: report.description,
+        screenshot: report.screenshot, // Base64 screenshot
+        city: 'Mumbai',
+        state: 'Maharashtra',
+        country: 'India'
+      })
+    });
+  } catch (err) {
+    console.error('Failed to sync report with backend:', err);
+  }
+
+  return localRecord;
 }
 
 /* ==========================================================================

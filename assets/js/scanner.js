@@ -71,6 +71,31 @@ function initScannerUI() {
       fileInput.click();
     }, 400);
   }
+
+  // Auto-trigger programmatic scan analysis for showcase testing
+  const testPayload = urlParams.get('test_payload');
+  if (testPayload) {
+    window.history.replaceState({}, document.title, window.location.pathname);
+    setTimeout(() => {
+      handleScanSuccess(testPayload);
+    }, 600);
+  }
+
+  // Auto-trigger Hackathon Demo stages
+  const demoMode = urlParams.get('demo');
+  if (demoMode) {
+    if (demoMode === 'safe') {
+      showDemoHUD('STAGE 1 - Simulating Scanning Safe QR Code (https://google.com)', '#22c55e');
+      setTimeout(() => {
+        handleScanSuccess("https://google.com");
+      }, 1500);
+    } else if (demoMode === 'dangerous') {
+      showDemoHUD('STAGE 2 - Simulating Scanning Phishing QR Code (http://sbi-login-verification.xyz/secure)', '#ef4444');
+      setTimeout(() => {
+        handleScanSuccess("http://sbi-login-verification.xyz/secure");
+      }, 1500);
+    }
+  }
 }
 
 /* ==========================================================================
@@ -230,40 +255,125 @@ function handleScanSuccess(decodedText) {
   }
   
   if (window.QRShieldUtils) {
-    window.QRShieldUtils.showLoading('Running Security Analysis...', 'Calculating threat vectors');
+    window.QRShieldUtils.showLoading('Initializing Security Diagnostics...', '👁️ Booting local cyber analyst heuristics...');
   }
 
-  // Simulate server/AI logic delay for high-tech feeling
-  setTimeout(() => {
+  // Create sequential loading logs updates
+  const steps = [
+    { delay: 400, title: 'Analyzing QR scheme type...', sub: '⚙️ Identifying SSID, UPI VPA, mailto or HTTP payloads...' },
+    { delay: 800, title: 'Checking Safe Browsing registers...', sub: '🛡️ Querying live Google Safe Browsing reputation feeds...' },
+    { delay: 1200, title: 'Fetching VirusTotal reputation...', sub: '🔍 Querying VirusTotal domain threat analytics...' },
+    { delay: 1600, title: 'Generating Gemini AI explanation...', sub: '🤖 Synthesizing explainable risk profiles & classifications...' },
+    { delay: 2000, title: 'Compiling risk scorecard...', sub: '📊 Compiling final weighted risk score & indicators...' }
+  ];
+  
+  steps.forEach(step => {
+    setTimeout(() => {
+      if (window.QRShieldUtils) {
+        window.QRShieldUtils.showLoading(step.title, step.sub);
+      }
+    }, step.delay);
+  });
+
+  // Fetch from backend API
+  setTimeout(async () => {
+    // 1. Dispatch dynamic query to backend API
+    const token = localStorage.getItem('qr_shield_token');
+    const headers = { 'Content-Type': 'application/json' };
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
+    }
+
+    let analysis = null;
+    let isBackendSuccess = false;
+    let data = null;
+
+    try {
+      const res = await fetch('/scan', {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({
+          payload: decodedText,
+          city: 'Mumbai', // Default metadata region
+          latitude: 19.0760,
+          longitude: 72.8777
+        })
+      });
+
+      data = await res.json();
+      if (res.ok && data.success) {
+        // Backend successfully processed metrics!
+        analysis = data.scan.analysis;
+        analysis.rawContent = data.scan.payload;
+        analysis.type = data.scan.qrType;
+        isBackendSuccess = true;
+        console.log('[Scanner] Dynamic backend threat report retrieved:', analysis);
+      } else {
+        throw new Error(data.message || 'API request rejected');
+      }
+    } catch (err) {
+      console.warn('[Scanner] Threat Intelligence API unreachable. Falling back to offline heuristics:', err.message);
+      if (window.QRShieldAnalysis) {
+        analysis = window.QRShieldAnalysis.analyzeQRContent(decodedText);
+      }
+    }
+
     if (window.QRShieldUtils) {
       window.QRShieldUtils.hideLoading();
     }
 
-    // 1. Run checks
-    if (!window.QRShieldAnalysis) {
-      console.error('Analysis engine not loaded');
+    if (!analysis) {
+      if (window.QRShieldUtils) window.QRShieldUtils.showToast('Failed to analyze QR code payload.', 'error');
       return;
     }
-    
-    const analysis = window.QRShieldAnalysis.analyzeQRContent(decodedText);
-    
-    // 2. Render Results
+
+    const rLevel = analysis.threatLevel || analysis.riskLevel;
+
+    // 2. Render Results Card
     displayAnalysisResults(analysis);
     
-    // 3. Save to History
+    // 3. Save to History (local cache update only if backend succeeded to prevent duplicate POSTs)
     if (window.QRShieldUtils) {
-      window.QRShieldUtils.addScanToHistory({
-        type: analysis.type,
-        riskScore: analysis.riskScore,
-        riskLevel: analysis.riskLevel,
-        content: analysis.rawContent
-      });
+      if (isBackendSuccess) {
+        try {
+          const rawHis = localStorage.getItem('qr_shield_history') || '[]';
+          const parsedHis = JSON.parse(rawHis);
+          parsedHis.unshift({
+            id: data.scan.scanId,
+            timestamp: data.scan.timestamp,
+            type: analysis.type,
+            riskScore: analysis.riskScore,
+            riskLevel: rLevel,
+            content: analysis.rawContent
+          });
+          if (parsedHis.length > 100) parsedHis.pop();
+          localStorage.setItem('qr_shield_history', JSON.stringify(parsedHis));
+        } catch (e) {
+          console.error('History cache sync error:', e);
+        }
+      } else {
+        // Local offline fallback record creation
+        await window.QRShieldUtils.addScanToHistory({
+          type: analysis.type,
+          riskScore: analysis.riskScore,
+          riskLevel: rLevel,
+          content: analysis.rawContent
+        });
+      }
     }
 
-    // 4. Trigger Feedbacks based on Risk
-    triggerScanEffects(analysis.riskLevel);
+    // 4. Trigger visual feedbacks
+    triggerScanEffects(rLevel);
 
-  }, 1200);
+    // 5. Hackathon Demo transition coordination
+    const demoMode = new URLSearchParams(window.location.search).get('demo');
+    if (demoMode === 'safe') {
+      startDemoCountdown('Stage 2: Critical Phishing Scan starting', 'scanner.html?demo=dangerous', 5);
+    } else if (demoMode === 'dangerous') {
+      startDemoCountdown('Stage 3: Loading Real-Time Police SOC Dashboard', 'admin.html?demo=1', 6);
+    }
+
+  }, 2400); // 2.4s matching diagnostic logging timeline
 }
 
 function displayAnalysisResults(analysis) {
@@ -284,14 +394,16 @@ function displayAnalysisResults(analysis) {
   if (typeEl) typeEl.textContent = analysis.type;
   if (contentEl) contentEl.textContent = analysis.rawContent;
   
+  const rLevel = analysis.threatLevel || analysis.riskLevel;
+
   // Set Risk badge level styling
   if (riskLevelEl) {
-    riskLevelEl.textContent = analysis.riskLevel;
+    riskLevelEl.textContent = rLevel;
     riskLevelEl.className = 'result-badge'; // reset
-    if (analysis.riskLevel === 'Safe') riskLevelEl.classList.add('badge-safe');
-    if (analysis.riskLevel === 'Medium') riskLevelEl.classList.add('badge-medium');
-    if (analysis.riskLevel === 'Suspicious') riskLevelEl.classList.add('badge-suspicious');
-    if (analysis.riskLevel === 'Dangerous') riskLevelEl.classList.add('badge-dangerous');
+    if (rLevel === 'Safe' || rLevel === 'Low Risk') riskLevelEl.classList.add('badge-safe');
+    if (rLevel === 'Medium' || rLevel === 'Medium Risk') riskLevelEl.classList.add('badge-medium');
+    if (rLevel === 'Suspicious' || rLevel === 'High Risk') riskLevelEl.classList.add('badge-suspicious');
+    if (rLevel === 'Dangerous' || rLevel === 'Critical') riskLevelEl.classList.add('badge-dangerous');
   }
 
   if (riskDescEl) {
@@ -299,10 +411,74 @@ function displayAnalysisResults(analysis) {
   }
 
   // Render Gauge Progress Animations
-  updateRiskGauge(analysis.riskScore, analysis.riskLevel);
+  updateRiskGauge(analysis.riskScore, rLevel);
 
-  // Render Security Checklist Matrix
-  renderChecklist(analysis.checklist);
+  // Compile rich unified checklist from API outputs
+  const displayChecklist = [];
+
+  if (analysis.googleSafeBrowsing) {
+    const isSafe = analysis.googleSafeBrowsing === 'Safe';
+    displayChecklist.push({
+      name: 'Google Safe Browsing',
+      pass: isSafe,
+      desc: isSafe ? 'Verified clean domain database status.' : `Threat matches: ${analysis.googleSafeBrowsing}`
+    });
+  }
+
+  if (analysis.virusTotal) {
+    const isSafe = (analysis.virusTotal.malicious || 0) === 0;
+    displayChecklist.push({
+      name: 'VirusTotal Threat Scan',
+      pass: isSafe,
+      desc: isSafe ? '0 malicious vendors flagged this link.' : `${analysis.virusTotal.malicious} security vendors flagged this link (${analysis.virusTotal.ratio}).`
+    });
+  }
+
+  if (typeof analysis.communityReports !== 'undefined') {
+    const isSafe = (analysis.communityReports || 0) === 0;
+    displayChecklist.push({
+      name: 'Community Security Trust',
+      pass: isSafe,
+      desc: isSafe ? '0 fraud complaints reported by community agents.' : `${analysis.communityReports} fraud/phishing complaints filed for this payload.`
+    });
+  }
+
+  if (analysis.confidence) {
+    displayChecklist.push({
+      name: 'AI Analyst Confidence',
+      pass: true,
+      desc: `Classification confidence rated at ${analysis.confidence}%.`
+    });
+  }
+
+  if (analysis.technicalIndicators && Array.isArray(analysis.technicalIndicators)) {
+    analysis.technicalIndicators.forEach(ind => {
+      const lower = ind.toLowerCase();
+      const isPass = !lower.includes('missing') && !lower.includes('malicious') && !lower.includes('suspicious') && !lower.includes('typo') && !lower.includes('spoof') && !lower.includes('scam') && !lower.includes('fraud') && !lower.includes('bait') && !lower.includes('unverified');
+      displayChecklist.push({
+        name: 'Technical Indicator',
+        pass: isPass,
+        desc: ind
+      });
+    });
+  }
+
+  const checklistToRender = displayChecklist.length > 0 ? displayChecklist : (analysis.checklist || []);
+  renderChecklist(checklistToRender);
+
+  // Parse UPI details locally if not populated
+  if (analysis.type === 'UPI' && (!analysis.details || Object.keys(analysis.details).length === 0)) {
+    analysis.details = { upiId: 'Unknown VPA', merchantName: 'Unverified Merchant', amount: 'N/A' };
+    try {
+      const urlParts = analysis.rawContent.split('?');
+      if (urlParts.length > 1) {
+        const searchParams = new URLSearchParams(urlParts[1]);
+        analysis.details.upiId = searchParams.get('pa') || 'Unknown VPA';
+        analysis.details.merchantName = searchParams.get('pn') || 'Unverified Merchant';
+        analysis.details.amount = searchParams.get('am') || 'N/A';
+      }
+    } catch(e) {}
+  }
 
   // Render UPI or specialized detail fields
   renderSpecializedCard(analysis);
@@ -310,9 +486,88 @@ function displayAnalysisResults(analysis) {
   // Setup dynamic Open button behaviour
   updateActionButtons(analysis);
 
-  // Render AI explanatory text typing speed animation
+  // Setup AI reasoning explanations html block
   if (aiExplanationEl) {
-    animateTextTyping(analysis.aiExplanation, aiExplanationEl);
+    const displayCategory = analysis.threatCategory || (analysis.riskScore <= 20 ? 'Safe content' : 'Threat suspect');
+    const displayRec = analysis.recommendation || 'Proceed carefully';
+    
+    const explanationHtml = `
+      <div style="font-weight: 700; color: var(--color-cyan); margin-bottom: 6px; font-size: 0.95rem; text-transform: uppercase;">AI Analyst Assessment</div>
+      <div style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 8px;">
+        Category: <strong>${displayCategory}</strong> | Risk Severity: <strong>${rLevel}</strong>
+      </div>
+      <p style="margin-bottom: 12px; line-height: 1.5; font-size: 0.95rem;">${analysis.reasoning}</p>
+      <div style="border-top: 1px dashed var(--border-color); padding-top: 10px; margin-top: 10px;">
+        <strong style="color: var(--color-warning); text-transform: uppercase; font-size: 0.85rem; display: block; margin-bottom: 4px;">Recommended Action:</strong>
+        <span style="font-weight: 700; font-size: 1rem; color: #fff;">${displayRec}</span>
+      </div>
+    `;
+    aiExplanationEl.innerHTML = explanationHtml;
+  }
+
+  // Inject Report Export panel dynamically
+  let exportPanel = document.getElementById('report-export-panel');
+  if (!exportPanel) {
+    const actionContainer = document.querySelector('.result-actions');
+    if (actionContainer) {
+      exportPanel = document.createElement('div');
+      exportPanel.id = 'report-export-panel';
+      exportPanel.style.display = 'flex';
+      exportPanel.style.gap = '8px';
+      exportPanel.style.width = '100%';
+      exportPanel.style.justifyContent = 'center';
+      exportPanel.style.marginTop = '15px';
+      exportPanel.innerHTML = `
+        <button class="btn btn-secondary" id="export-pdf-btn" style="padding: 6px 12px; font-size: 0.8rem; flex: 1;">Export PDF</button>
+        <button class="btn btn-secondary" id="export-json-btn" style="padding: 6px 12px; font-size: 0.8rem; flex: 1;">Export JSON</button>
+        <button class="btn btn-secondary" id="export-csv-btn" style="padding: 6px 12px; font-size: 0.8rem; flex: 1;">Export CSV</button>
+      `;
+      actionContainer.parentNode.insertBefore(exportPanel, actionContainer.nextSibling);
+
+      // Add click listeners to export buttons
+      document.getElementById('export-pdf-btn').addEventListener('click', () => {
+        window.print();
+      });
+
+      document.getElementById('export-json-btn').addEventListener('click', () => {
+        const jsonStr = JSON.stringify(analysis, null, 2);
+        const blob = new Blob([jsonStr], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `QR_Shield_Security_Report_${Date.now()}.json`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+      });
+
+      document.getElementById('export-csv-btn').addEventListener('click', () => {
+        const rows = [
+          ["Payload", "QR Type", "Risk Score", "Threat Level", "AI Recommendation", "AI Explanation"],
+          [
+            analysis.rawContent,
+            analysis.type,
+            analysis.riskScore,
+            analysis.threatLevel || analysis.riskLevel,
+            analysis.recommendation || '',
+            analysis.reasoning || analysis.aiExplanation || ''
+          ]
+        ];
+        let csvContent = "data:text/csv;charset=utf-8,";
+        rows.forEach(r => {
+          const row = r.map(val => `"${String(val).replace(/"/g, '""')}"`).join(",");
+          csvContent += row + "\n";
+        });
+        const encodedUri = encodeURI(csvContent);
+        const link = document.createElement("a");
+        link.setAttribute("href", encodedUri);
+        link.setAttribute("download", `QR_Shield_Security_Report_${Date.now()}.csv`);
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+      });
+    }
   }
 }
 
@@ -330,11 +585,11 @@ function updateRiskGauge(score, level) {
   circleFg.style.strokeDashoffset = offset;
   scoreNum.innerHTML = `${score}<span>Risk</span>`;
   
-  // Color the progress indicators
+  // Color the progress indicators matching modern security bands
   let color = '#22c55e'; // safe green
-  if (level === 'Medium') color = '#f59e0b';
-  if (level === 'Suspicious') color = '#f97316';
-  if (level === 'Dangerous') color = '#ef4444';
+  if (level === 'Medium' || level === 'Medium Risk') color = '#f59e0b';
+  if (level === 'Suspicious' || level === 'High Risk') color = '#f97316';
+  if (level === 'Dangerous' || level === 'Critical') color = '#ef4444';
   
   circleFg.style.stroke = color;
   
@@ -530,4 +785,71 @@ function resetScannerConsole() {
   if (window.QRShieldUtils) {
     window.QRShieldUtils.showToast('Scanner console reset.', 'info');
   }
+}
+
+function showDemoHUD(message, stageColor) {
+  let hud = document.getElementById('demo-hud-overlay');
+  if (!hud) {
+    hud = document.createElement('div');
+    hud.id = 'demo-hud-overlay';
+    hud.style.position = 'fixed';
+    hud.style.top = '80px';
+    hud.style.left = '50%';
+    hud.style.transform = 'translateX(-50%)';
+    hud.style.zIndex = '9999';
+    hud.style.background = 'var(--bg-card)';
+    hud.style.border = '2px solid ' + stageColor;
+    hud.style.boxShadow = '0 0 20px ' + stageColor;
+    hud.style.padding = '12px 25px';
+    hud.style.borderRadius = '30px';
+    hud.style.backdropFilter = 'blur(15px)';
+    hud.style.fontWeight = '800';
+    hud.style.fontSize = '0.95rem';
+    hud.style.color = '#fff';
+    hud.style.textAlign = 'center';
+    hud.style.transition = 'all 0.3s ease';
+    document.body.appendChild(hud);
+  }
+  hud.style.borderColor = stageColor;
+  hud.style.boxShadow = '0 0 20px ' + stageColor;
+  hud.innerHTML = `⚡ <span style="color: ${stageColor};">DEMO STATE:</span> ${message}`;
+}
+
+function startDemoCountdown(message, nextUrl, seconds) {
+  let overlay = document.getElementById('demo-countdown-overlay');
+  if (!overlay) {
+    overlay = document.createElement('div');
+    overlay.id = 'demo-countdown-overlay';
+    overlay.style.position = 'fixed';
+    overlay.style.bottom = '30px';
+    overlay.style.left = '50%';
+    overlay.style.transform = 'translateX(-50%)';
+    overlay.style.background = 'rgba(6, 182, 212, 0.15)';
+    overlay.style.border = '1px solid var(--color-cyan)';
+    overlay.style.boxShadow = 'var(--glow-cyan)';
+    overlay.style.padding = '15px 30px';
+    overlay.style.borderRadius = '12px';
+    overlay.style.backdropFilter = 'blur(10px)';
+    overlay.style.color = '#fff';
+    overlay.style.zIndex = '99999';
+    overlay.style.fontWeight = '700';
+    overlay.style.textAlign = 'center';
+    overlay.style.fontSize = '0.95rem';
+    document.body.appendChild(overlay);
+  }
+
+  let remaining = seconds;
+  const interval = setInterval(() => {
+    remaining--;
+    if (remaining <= 0) {
+      clearInterval(interval);
+      overlay.innerHTML = `🚀 Loading next stage...`;
+      setTimeout(() => {
+        window.location.href = nextUrl;
+      }, 500);
+    } else {
+      overlay.innerHTML = `⏱️ ${message} in <strong style="color: var(--color-cyan); font-size: 1.1rem;">${remaining}</strong> seconds...`;
+    }
+  }, 1000);
+  overlay.innerHTML = `⏱️ ${message} in <strong style="color: var(--color-cyan); font-size: 1.1rem;">${remaining}</strong> seconds...`;
 }

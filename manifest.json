@@ -1,0 +1,21 @@
+{
+  "name": "QR Shield AI - Cybersecurity Threat Intelligence",
+  "short_name": "QR Shield AI",
+  "description": "AI-powered QR scanner and real-time threat intelligence pipeline.",
+  "start_url": "/index.html",
+  "display": "standalone",
+  "background_color": "#030712",
+  "theme_color": "#06b6d4",
+  "icons": [
+    {
+      "src": "assets/js/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "assets/js/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}

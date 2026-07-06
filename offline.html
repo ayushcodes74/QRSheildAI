@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>QR Shield AI - Connection Offline</title>
+  <link rel="stylesheet" href="assets/css/style.css">
+  <style>
+    .offline-container {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 80vh;
+      text-align: center;
+      padding: 20px;
+    }
+    
+    .offline-icon {
+      font-size: 4.5rem;
+      color: var(--color-red);
+      margin-bottom: 25px;
+      animation: alert-pulse 1.5s infinite alternate;
+    }
+
+    @keyframes alert-pulse {
+      from { transform: scale(1); filter: drop-shadow(0 0 5px rgba(239,68,68,0.4)); }
+      to { transform: scale(1.05); filter: drop-shadow(0 0 20px rgba(239,68,68,0.8)); }
+    }
+  </style>
+</head>
+<body>
+  <div class="cyber-grid-overlay"></div>
+
+  <header>
+    <div class="container navbar">
+      <a href="index.html" class="logo-container">
+        <span class="logo-text">QR SHIELD<span>.AI</span></span>
+      </a>
+    </div>
+  </header>
+
+  <main class="container offline-container fade-in">
+    <div class="offline-icon">📡</div>
+    <h1 style="font-size: 2.5rem; font-weight: 800; margin-bottom: 10px;">Security Operations <span class="gradient-text">Offline</span></h1>
+    <p style="color: var(--text-muted); max-width: 500px; margin-bottom: 30px; font-size: 1rem; line-height: 1.6;">
+      Your internet connection has been lost. QR Shield AI has paused cloud threat intelligence lookups. Basic local format heuristics will continue to operate.
+    </p>
+    <button class="btn btn-primary" onclick="window.location.reload()">
+      🔄 Retry Connection
+    </button>
+  </main>
+</body>
+</html>

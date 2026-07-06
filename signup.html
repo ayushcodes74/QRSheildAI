@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>QR Shield AI - Cybersecurity Profile Registration</title>
+  <meta name="description" content="Register your cybersecurity agent profile with QR Shield AI to track scans and file phishing reports.">
+  <link rel="stylesheet" href="assets/css/style.css">
+  <style>
+    @media (max-width: 480px) {
+      main.page-container {
+        margin-top: 20px !important;
+        margin-bottom: 40px !important;
+        padding: 0 15px !important;
+      }
+      .glass-card {
+        padding: 20px !important;
+      }
+    }
+  </style>
+</head>
+<body>
+  <!-- Floating Cyber Background Layers -->
+  <div class="cyber-grid-overlay"></div>
+
+  <!-- Header Navigation -->
+  <header>
+    <div class="container navbar">
+      <a href="index.html" class="logo-container" id="nav-logo">
+        <div class="logo-icon">
+          <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" stroke="currentColor" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
+            <polyline points="9 11 11 13 15 9" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+          </svg>
+        </div>
+        <span class="logo-text">QR SHIELD<span>.AI</span></span>
+      </a>
+
+      <nav>
+        <ul class="nav-links" id="navbar-menu">
+          <li><a href="index.html">Home</a></li>
+          <li><a href="scanner.html">Scan QR</a></li>
+          <li><a href="history.html">History</a></li>
+          <li><a href="report.html">Report Scam</a></li>
+          <li><a href="about.html">About</a></li>
+        </ul>
+      </nav>
+
+      <div class="nav-actions">
+        <button class="theme-toggle-btn" id="theme-switcher" aria-label="Toggle visual theme" title="Switch Theme"></button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Signup Section -->
+  <main class="container page-container fade-in" style="max-width: 480px; margin-top: 40px; margin-bottom: 60px;">
+    <div class="page-header" style="text-align: center; margin-bottom: 25px;">
+      <span class="result-badge badge-safe" style="text-transform: uppercase; font-size: 0.75rem; letter-spacing: 1px; padding: 4px 12px; margin-bottom: 10px; display: inline-block;">Register threat profile</span>
+      <h1 style="font-size: 2.2rem; font-weight: 800; margin-bottom: 5px;">Profile <span class="gradient-text">Sign Up</span></h1>
+      <p style="font-size: 0.95rem; color: var(--text-muted);">Create your defense console credentials to track scanned threats.</p>
+    </div>
+
+    <!-- Signup Card -->
+    <div class="glass-card" style="padding: 30px; border-radius: 16px;">
+      <form id="auth-signup-form" novalidate>
+        <!-- Full Name -->
+        <div class="form-group" style="margin-bottom: 15px;">
+          <label for="signup-name" style="display: block; font-weight: 600; margin-bottom: 8px; font-size: 0.9rem;">Agent Full Name</label>
+          <input type="text" class="form-control" id="signup-name" placeholder="e.g. John Doe" required style="width: 100%;">
+        </div>
+
+        <!-- Email Address -->
+        <div class="form-group" style="margin-bottom: 15px;">
+          <label for="signup-email" style="display: block; font-weight: 600; margin-bottom: 8px; font-size: 0.9rem;">Cyber Identity (Email Address)</label>
+          <input type="email" class="form-control" id="signup-email" placeholder="e.g. agent@qrshield.ai" required style="width: 100%;">
+          <div style="font-size: 0.75rem; color: var(--text-muted); margin-top: 4px;">
+            Note: Emails containing <code>admin@</code> or <code>police@</code> automatically unlock authorization keys.
+          </div>
+        </div>
+
+        <!-- Password -->
+        <div class="form-group" style="margin-bottom: 15px;">
+          <label for="signup-password" style="display: block; font-weight: 600; margin-bottom: 8px; font-size: 0.9rem;">Security Keyphrase (Password)</label>
+          <input type="password" class="form-control" id="signup-password" placeholder="Min. 6 characters" required style="width: 100%;">
+        </div>
+
+        <!-- Photo URL -->
+        <div class="form-group" style="margin-bottom: 20px;">
+          <label for="signup-photo" style="display: block; font-weight: 600; margin-bottom: 8px; font-size: 0.9rem;">Agent Profile Photo URL (Optional)</label>
+          <input type="url" class="form-control" id="signup-photo" placeholder="e.g. https://domain.com/photo.jpg" style="width: 100%;">
+        </div>
+
+        <!-- Signup Button -->
+        <div style="margin-top: 25px;">
+          <button type="submit" class="btn btn-primary" style="width: 100%; justify-content: center; height: 46px; font-size: 1rem;">
+            <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+              <circle cx="8.5" cy="7" r="4"></circle>
+              <polyline points="17 11 19 13 23 9"></polyline>
+            </svg>
+            Initialize Security Profile
+          </button>
+        </div>
+      </form>
+
+      <div style="text-align: center; margin-top: 20px; font-size: 0.9rem; color: var(--text-muted);">
+        Already have a security profile? 
+        <a href="login.html" style="color: var(--color-cyan); text-decoration: none; font-weight: 600; margin-left: 4px; transition: text-shadow var(--transition-fast);">Portal Sign In</a>
+      </div>
+    </div>
+  </main>
+
+  <!-- Sticky Footer -->
+  <footer>
+    <div class="container footer-content">
+      <ul class="footer-links">
+        <li><a href="index.html">Dashboard</a></li>
+        <li><a href="scanner.html">Secure Scanner</a></li>
+        <li><a href="report.html">Report Scam</a></li>
+        <li><a href="about.html">About project</a></li>
+      </ul>
+      <p>&copy; 2026 QR Shield AI. Built with production-ready Firebase backend integration and MVC architecture.</p>
+    </div>
+  </footer>
+
+  <!-- Include Scripts -->
+  <script src="assets/js/utils.js"></script>
+  
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      const signupForm = document.getElementById('auth-signup-form');
+      const nameInput = document.getElementById('signup-name');
+      const emailInput = document.getElementById('signup-email');
+      const passwordInput = document.getElementById('signup-password');
+      const photoInput = document.getElementById('signup-photo');
+
+      // Check if user is already logged in
+      if (localStorage.getItem('qr_shield_token')) {
+        window.location.href = 'index.html';
+      }
+
+      if (signupForm) {
+        signupForm.addEventListener('submit', async (e) => {
+          e.preventDefault();
+          const name = nameInput.value.trim();
+          const email = emailInput.value.trim();
+          const password = passwordInput.value;
+          const photo = photoInput.value.trim();
+
+          if (!name || !email || !password) {
+            QRShieldUtils.showToast('Please fill out all required configuration fields.', 'warning');
+            return;
+          }
+
+          if (password.length < 6) {
+            QRShieldUtils.showToast('Security Keyphrase must be at least 6 characters in length.', 'warning');
+            return;
+          }
+
+          QRShieldUtils.showLoading('Creating Profile...', 'Writing database authorization entries');
+
+          try {
+            const response = await fetch('/auth/signup', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ name, email, password, photo: photo || null })
+            });
+
+            const data = await response.json();
+            QRShieldUtils.hideLoading();
+
+            if (response.ok && data.success) {
+              QRShieldUtils.showToast(data.message || 'Security Profile Created!', 'success');
+              // Cache session
+              localStorage.setItem('qr_shield_token', data.token);
+              localStorage.setItem('qr_shield_user', JSON.stringify(data.user));
+
+              // Redirect to Dashboard
+              setTimeout(() => {
+                if (data.user.role === 'Admin' || data.user.role === 'Police') {
+                  window.location.href = 'admin.html';
+                } else {
+                  window.location.href = 'index.html';
+                }
+              }, 1200);
+            } else {
+              QRShieldUtils.showToast(data.message || 'Signup failed.', 'error');
+            }
+          } catch (err) {
+            QRShieldUtils.hideLoading();
+            console.error('Signup network failure:', err);
+            QRShieldUtils.showToast('Network interface timeout. Could not connect to API.', 'error');
+          }
+        });
+      }
+    });
+  </script>
+</body>
+</html>

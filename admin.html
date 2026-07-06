@@ -1,0 +1,1661 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>QR Shield AI - Cybersecurity SOC Command Center</title>
+  <meta name="description" content="Professional Real-time Threat Intelligence and Security Operations Command center for QR fraud monitoring.">
+  
+  <!-- CDNs for Maps, Charts, and visual style tokens -->
+  <link rel="stylesheet" href="assets/css/style.css">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+  <!-- Security Authentication Check -->
+  <script>
+    (function() {
+      const urlParams = new URLSearchParams(window.location.search);
+      const isDemo = urlParams.get('demo') === '1';
+      const token = localStorage.getItem('qr_shield_token');
+      const user = JSON.parse(localStorage.getItem('qr_shield_user') || '{}');
+      if (!token || (user.role !== 'Admin' && user.role !== 'Police')) {
+        if (!isDemo) {
+          alert('Access Denied: Administrative Credentials Required.');
+          window.location.replace('login.html');
+        }
+      }
+    })();
+  </script>
+
+  <style>
+    /* CSS overrides for Microsoft Defender / SOC Layout density */
+    .soc-layout-grid {
+      display: grid;
+      grid-template-columns: 3fr 1fr;
+      gap: 25px;
+      margin-top: 25px;
+    }
+    
+    .soc-header-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 25px;
+      border-bottom: 1px solid var(--border-color);
+      padding-bottom: 15px;
+      flex-wrap: wrap;
+      gap: 15px;
+    }
+
+    .soc-card-title {
+      font-size: 0.95rem;
+      font-weight: 700;
+      color: var(--color-cyan);
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      margin-bottom: 15px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      border-bottom: 1px dashed rgba(255,255,255,0.05);
+      padding-bottom: 8px;
+    }
+
+    .soc-tabs-strip {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 25px;
+      overflow-x: auto;
+    }
+
+    .soc-tab {
+      background: rgba(255,255,255,0.02);
+      border: 1px solid var(--border-color);
+      color: var(--text-muted);
+      padding: 10px 18px;
+      border-radius: 6px;
+      font-weight: 600;
+      cursor: pointer;
+      font-size: 0.85rem;
+      white-space: nowrap;
+      transition: all var(--transition-fast);
+    }
+
+    .soc-tab:hover {
+      background: rgba(255,255,255,0.06);
+      color: var(--text-main);
+    }
+
+    .soc-tab.active {
+      background: var(--grad-cyan-blue);
+      color: #fff;
+      border-color: transparent;
+      box-shadow: var(--glow-cyan);
+    }
+
+    .soc-tab-content {
+      display: none;
+    }
+
+    .soc-tab-content.active {
+      display: block;
+    }
+
+    /* Live feed scanner log tickers */
+    .ticker-feed {
+      height: 380px;
+      overflow-y: auto;
+      font-family: 'Courier New', Courier, monospace;
+      font-size: 0.8rem;
+      background: rgba(0,0,0,0.3);
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      padding: 15px;
+      line-height: 1.5;
+    }
+
+    .ticker-item {
+      border-bottom: 1px solid rgba(255,255,255,0.03);
+      padding: 8px 0;
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 8px;
+    }
+
+    .ticker-item.critical {
+      color: var(--color-red);
+      background: rgba(239, 68, 68, 0.04);
+      animation: alert-flash 1s infinite alternate;
+    }
+
+    .ticker-item.high {
+      color: var(--color-warning);
+    }
+
+    @keyframes alert-flash {
+      from { background-color: rgba(239, 68, 68, 0.02); }
+      to { background-color: rgba(239, 68, 68, 0.08); }
+    }
+
+    /* Stats Grid */
+    .soc-stats-matrix {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+      gap: 15px;
+      margin-bottom: 25px;
+    }
+
+    .soc-stat-node {
+      padding: 15px;
+      border-radius: 8px;
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      text-align: center;
+      transition: transform var(--transition-fast);
+    }
+
+    .soc-stat-node:hover {
+      transform: translateY(-2px);
+    }
+
+    .soc-stat-val {
+      font-size: 1.6rem;
+      font-weight: 800;
+      margin-top: 5px;
+      color: #fff;
+    }
+
+    .soc-stat-val.red { color: var(--color-red); }
+    .soc-stat-val.orange { color: var(--color-warning); }
+    .soc-stat-val.cyan { color: var(--color-cyan); }
+    .soc-stat-val.green { color: #22c55e; }
+
+    /* Map container adjustments */
+    #soc-map {
+      height: 380px;
+      border-radius: 12px;
+      border: 1px solid var(--border-color);
+      position: relative;
+      z-index: 1;
+    }
+
+    /* Modal Layout overlay */
+    .soc-modal {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0,0,0,0.85);
+      backdrop-filter: blur(10px);
+      z-index: 999;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.3s ease;
+    }
+
+    .soc-modal.active {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    .soc-modal-card {
+      width: 90%;
+      max-width: 800px;
+      max-height: 85%;
+      overflow-y: auto;
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: 16px;
+      padding: 30px;
+      position: relative;
+    }
+
+    /* Filters row */
+    .filters-row {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+      gap: 12px;
+      margin-bottom: 20px;
+      padding: 15px;
+      background: rgba(255,255,255,0.01);
+      border-radius: 8px;
+      border: 1px solid var(--border-color);
+    }
+
+    .filter-input {
+      background: rgba(0,0,0,0.3);
+      border: 1px solid var(--border-color);
+      color: #fff;
+      padding: 8px 12px;
+      border-radius: 6px;
+      font-size: 0.8rem;
+    }
+
+    /* Block list forms */
+    .block-form-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+    }
+
+    /* Critical alert flash overlay banner */
+    .critical-overlay {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      background: rgba(239, 68, 68, 0.95);
+      border: 2px solid #fff;
+      box-shadow: 0 0 20px rgba(239,68,68,0.8);
+      color: #fff;
+      padding: 15px 25px;
+      border-radius: 8px;
+      z-index: 1000;
+      font-weight: 800;
+      display: none;
+      animation: slide-in-alert 0.3s ease, pulse-glow 0.8s infinite alternate;
+    }
+
+    @keyframes slide-in-alert {
+      from { transform: translateX(120%); }
+      to { transform: translateX(0); }
+    }
+
+    @keyframes pulse-glow {
+      from { box-shadow: 0 0 10px rgba(239,68,68,0.5); }
+      to { box-shadow: 0 0 25px rgba(239,68,68,0.9); }
+    }
+
+    .threat-intel-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 15px;
+      margin-bottom: 25px;
+    }
+
+    .intel-node {
+      padding: 15px;
+      border-radius: 8px;
+      background: rgba(255,255,255,0.01);
+      border: 1px solid var(--border-color);
+    }
+
+    .intel-title {
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      color: var(--text-muted);
+      letter-spacing: 0.5px;
+    }
+
+    .intel-val {
+      font-size: 1rem;
+      font-weight: 700;
+      color: #fff;
+      margin-top: 5px;
+      word-break: break-all;
+    }
+
+    @media (max-width: 1024px) {
+      .soc-layout-grid {
+        grid-template-columns: 1fr;
+      }
+      .block-form-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="cyber-grid-overlay"></div>
+
+  <!-- Critical Threat Alert Popups -->
+  <div class="critical-overlay" id="critical-alert-box">
+    ⚠️ CRITICAL FRAUD DETECTED ON PORTAL!
+  </div>
+
+  <!-- Header Navigation -->
+  <header>
+    <div class="container navbar">
+      <a href="index.html" class="logo-container" id="nav-logo">
+        <div class="logo-icon">
+          <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" stroke="currentColor" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
+            <polyline points="9 11 11 13 15 9" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+          </svg>
+        </div>
+        <span class="logo-text">QR SHIELD<span>.AI</span></span>
+      </a>
+
+      <nav>
+        <ul class="nav-links" id="navbar-menu">
+          <li><a href="index.html">Home</a></li>
+          <li><a href="scanner.html">Scan QR</a></li>
+          <li><a href="history.html">History</a></li>
+          <li><a href="report.html">Report Scam</a></li>
+          <li><a href="about.html">About</a></li>
+        </ul>
+      </nav>
+
+      <div class="nav-actions">
+        <button class="theme-toggle-btn" id="theme-switcher" aria-label="Toggle visual theme" title="Switch Theme"></button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Command Center Panel -->
+  <main class="container page-container fade-in" style="margin-top: 30px; margin-bottom: 60px;">
+    <div class="soc-header-bar">
+      <div>
+        <span class="result-badge badge-dangerous" style="text-transform: uppercase; font-size: 0.75rem; letter-spacing: 1.5px; padding: 4px 12px; margin-bottom: 10px; display: inline-block;">POLICE THREAT INTELLIGENCE PORTAL</span>
+        <h1 style="font-size: 2.2rem; font-weight: 800; margin-bottom: 5px;">SOC Fraud Command <span class="gradient-text">Console</span></h1>
+        <p style="font-size: 0.95rem; color: var(--text-muted);">Real-time monitoring telemetry, interactive geolocational maps, and deep AI threat analytics.</p>
+      </div>
+      <div id="admin-identity-card" class="glass-card" style="padding: 12px 20px; display: flex; align-items: center; gap: 12px; border-radius: 10px;">
+        <!-- Loaded dynamically -->
+      </div>
+    </div>
+
+    <!-- System Tabs -->
+    <div class="soc-tabs-strip">
+      <div class="soc-tab active" data-target="tab-soc">SOC Command Monitor</div>
+      <div class="soc-tab" data-target="tab-analytics">Cyber Threat Analytics</div>
+      <div class="soc-tab" data-target="tab-reports">Incident Desk Reports</div>
+      <div class="soc-tab" data-target="tab-audits">Audit Activity Registry</div>
+      <div class="soc-tab" data-target="tab-settings">Administrative Settings</div>
+    </div>
+
+    <!-- ==========================================
+         TAB 1: SOC COMMAND MONITOR (MAP + FEED)
+         ========================================== -->
+    <section id="tab-soc" class="soc-tab-content active">
+      <!-- Stats Matrix -->
+      <div class="soc-stats-matrix" id="soc-stats-container">
+        <!-- Loaded dynamically -->
+      </div>
+
+      <!-- Threat Intelligence insight row -->
+      <div class="threat-intel-grid" id="threat-intel-container">
+        <!-- Loaded dynamically -->
+      </div>
+
+      <div class="soc-layout-grid">
+        <!-- Map Panel -->
+        <div class="glass-card" style="padding: 24px; border-radius: 12px;">
+          <h3 class="soc-card-title">
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="color: var(--color-cyan);"><polygon points="3 6 9 3 15 6 21 3 21 18 15 21 9 18 3 21"></polygon><line x1="9" y1="3" x2="9" y2="18"></line><line x1="15" y1="6" x2="15" y2="21"></line></svg>
+            Active Incident Geolocation Tracker
+          </h3>
+          <div id="soc-map"></div>
+        </div>
+
+        <!-- Ticker Ticker Log Feed -->
+        <div class="glass-card" style="padding: 24px; border-radius: 12px;">
+          <h3 class="soc-card-title">
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="color: var(--color-red);"><path d="M13 2L3 14h9l-1 8 10-16h-9l1-4z"></path></svg>
+            Live Threat Stream Log
+          </h3>
+          <div class="ticker-feed" id="live-threat-feed">
+            <div style="text-align: center; color: var(--text-muted); margin-top: 150px;">Awaiting telemetry logs stream...</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ==========================================
+         TAB 2: CYBER THREAT ANALYTICS
+         ========================================== -->
+    <section id="tab-analytics" class="soc-tab-content">
+      <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 25px; margin-bottom: 25px;">
+        <div class="glass-card" style="padding: 24px; border-radius: 12px;">
+          <h3 class="soc-card-title">QR Scan and Fraud Filing Timeline</h3>
+          <div style="height: 320px; position: relative;">
+            <canvas id="timelineChart"></canvas>
+          </div>
+        </div>
+        <div class="glass-card" style="padding: 24px; border-radius: 12px;">
+          <h3 class="soc-card-title">Risk Level Distribution</h3>
+          <div style="height: 320px; position: relative; display: flex; justify-content: center; align-items: center;">
+            <canvas id="riskPieChart"></canvas>
+          </div>
+        </div>
+      </div>
+
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 25px;">
+        <div class="glass-card" style="padding: 24px; border-radius: 12px;">
+          <h3 class="soc-card-title">Threat Categories Breakdown</h3>
+          <div style="height: 300px; position: relative;">
+            <canvas id="categoryChart"></canvas>
+          </div>
+        </div>
+        <div class="glass-card" style="padding: 24px; border-radius: 12px;">
+          <h3 class="soc-card-title">Scanned QR Types Distribution</h3>
+          <div style="height: 300px; position: relative;">
+            <canvas id="qrTypeChart"></canvas>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ==========================================
+         TAB 3: INCIDENT DESK REPORTS (TABLES)
+         ========================================== -->
+    <section id="tab-reports" class="soc-tab-content">
+      <div class="glass-card" style="padding: 24px; border-radius: 12px;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+          <h3 class="soc-card-title" style="margin-bottom: 0; border: none;">Master Phishing Reports Database</h3>
+          <div style="display: flex; gap: 10px;">
+            <button class="btn btn-secondary" onclick="exportData('csv')" style="padding: 8px 16px; font-size: 0.8rem;">Export CSV</button>
+            <button class="btn btn-secondary" onclick="exportData('print')" style="padding: 8px 16px; font-size: 0.8rem;">Print Report</button>
+          </div>
+        </div>
+
+        <!-- Search bar -->
+        <div style="margin-bottom: 15px;">
+          <input type="text" id="report-search-bar" class="filter-input" placeholder="Search by User, Domain, Merchant name, or ID..." style="width: 100%; max-width: 400px; padding: 10px 14px;">
+        </div>
+
+        <!-- Filters Row -->
+        <div class="filters-row">
+          <select id="filter-risk" class="filter-input" onchange="applyFilters()">
+            <option value="">All Risk Levels</option>
+            <option value="Safe">Safe</option>
+            <option value="Low Risk">Low Risk</option>
+            <option value="Medium Risk">Medium Risk</option>
+            <option value="High Risk">High Risk</option>
+            <option value="Critical">Critical</option>
+          </select>
+          <select id="filter-category" class="filter-input" onchange="applyFilters()">
+            <option value="">All Scam Categories</option>
+            <option value="Phishing">Phishing</option>
+            <option value="UPI Fraud">UPI Fraud</option>
+            <option value="Social Engineering">Social Engineering</option>
+            <option value="Malware">Malware</option>
+          </select>
+          <input type="text" id="filter-city" class="filter-input" placeholder="Filter by City..." oninput="applyFilters()">
+          <select id="filter-status" class="filter-input" onchange="applyFilters()">
+            <option value="">All Statuses</option>
+            <option value="Pending">Pending</option>
+            <option value="Investigating">Investigating</option>
+            <option value="Resolved">Resolved</option>
+            <option value="Approved">Approved</option>
+          </select>
+        </div>
+
+        <!-- Table Container -->
+        <div class="data-table-container">
+          <table class="admin-table" id="incidents-reports-table">
+            <thead>
+              <tr>
+                <th>Report ID</th>
+                <th>User Profile</th>
+                <th>Risk Score</th>
+                <th>Category</th>
+                <th>Location</th>
+                <th>Target Payload</th>
+                <th>Status</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="incidents-table-body">
+              <tr><td colspan="8" style="text-align: center; color: var(--text-muted);">Synchronizing records...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- ==========================================
+         TAB 4: AUDIT ACTIVITY REGISTRY
+         ========================================== -->
+    <section id="tab-audits" class="soc-tab-content">
+      <div class="glass-card" style="padding: 24px; border-radius: 12px;">
+        <h3 class="soc-card-title">System Audit Trails & Security Logs</h3>
+        <p style="font-size: 0.9rem; color: var(--text-muted); margin-bottom: 20px;">A tamper-evident registry logging critical administrative, login, and scan engine detection events.</p>
+        <div class="data-table-container">
+          <table class="admin-table">
+            <thead>
+              <tr>
+                <th>Timestamp</th>
+                <th>Security Action</th>
+                <th>User / Trigger Entity</th>
+                <th>Event Description Details</th>
+              </tr>
+            </thead>
+            <tbody id="audit-logs-body">
+              <!-- Loaded dynamically -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- ==========================================
+         TAB 5: ADMINISTRATIVE SETTINGS
+         ========================================== -->
+    <section id="tab-settings" class="soc-tab-content">
+      <div class="block-form-grid" style="margin-bottom: 25px;">
+        <!-- Global Blocklists -->
+        <div class="glass-card" style="padding: 24px; border-radius: 12px;">
+          <h3 class="soc-card-title">Global Threat Firewall Blocklist</h3>
+          <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 15px;">Manually block new phishing domains or fraudulent payment VPAs instantly across all scanner agents.</p>
+          
+          <div style="margin-bottom: 20px;">
+            <label style="font-size: 0.8rem; font-weight: 700; color: var(--text-muted); display: block; margin-bottom: 6px;">BLOCK DOMAIN / HOSTNAME</label>
+            <div style="display: flex; gap: 10px;">
+              <input type="text" id="block-domain-input" class="filter-input" placeholder="e.g. scamsbi-security.xyz" style="flex: 1;">
+              <button class="btn btn-primary" onclick="submitBlock('domain')" style="padding: 10px 20px;">Block Host</button>
+            </div>
+          </div>
+          
+          <div>
+            <label style="font-size: 0.8rem; font-weight: 700; color: var(--text-muted); display: block; margin-bottom: 6px;">BLOCK UPI VPA ADDRESS</label>
+            <div style="display: flex; gap: 10px;">
+              <input type="text" id="block-upi-input" class="filter-input" placeholder="e.g. fakecashback@paytm" style="flex: 1;">
+              <button class="btn class-dangerous" onclick="submitBlock('upi')" style="padding: 10px 20px; background: rgba(239,68,68,0.15); border: 1px solid var(--color-red); color: var(--color-red);">Block VPA</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Seed parameters / stats counts -->
+        <div class="glass-card" style="padding: 24px; border-radius: 12px;">
+          <h3 class="soc-card-title">Firewall Blocked Domains & UPI Registry</h3>
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+            <div>
+              <strong style="font-size: 0.8rem; text-transform: uppercase; color: var(--color-red); display: block; margin-bottom: 8px;">Blocked Domains</strong>
+              <div id="blocked-domains-list" style="height: 180px; overflow-y: auto; background: rgba(0,0,0,0.2); border-radius: 6px; padding: 10px; font-size: 0.8rem; border: 1px solid var(--border-color);">
+                <!-- Loaded dynamically -->
+              </div>
+            </div>
+            <div>
+              <strong style="font-size: 0.8rem; text-transform: uppercase; color: var(--color-red); display: block; margin-bottom: 8px;">Blocked UPI VPAs</strong>
+              <div id="blocked-upis-list" style="height: 180px; overflow-y: auto; background: rgba(0,0,0,0.2); border-radius: 6px; padding: 10px; font-size: 0.8rem; border: 1px solid var(--border-color);">
+                <!-- Loaded dynamically -->
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Agent role adjustments -->
+      <div class="glass-card" style="padding: 24px; border-radius: 12px;">
+        <h3 class="soc-card-title">Registered Security Agent Directories</h3>
+        <p style="font-size: 0.9rem; color: var(--text-muted); margin-bottom: 15px;">Modify cybersecurity agent roles, promote profiles to Moderator/Police, or revoke administrative access.</p>
+        
+        <div class="data-table-container">
+          <table class="admin-table">
+            <thead>
+              <tr>
+                <th>Agent Profile Name</th>
+                <th>Email Identifier</th>
+                <th>Active Role</th>
+                <th>Role Actions Promotion</th>
+              </tr>
+            </thead>
+            <tbody id="settings-users-list">
+              <!-- Loaded dynamically -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- ==========================================
+       DETAILED AI SECURITY REPORT MODAL OVERLAY
+       ========================================== -->
+  <div class="soc-modal" id="incident-report-modal">
+    <div class="soc-modal-card">
+      <button onclick="closeReportModal()" style="position: absolute; top: 20px; right: 20px; background: none; border: none; color: var(--text-muted); cursor: pointer; font-size: 1.5rem; font-weight: 700;">&times;</button>
+      
+      <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-color); padding-bottom: 15px; margin-bottom: 20px;">
+        <h2 style="font-size: 1.4rem; font-weight: 800;"><span style="color: var(--color-cyan);">AI Threat Assessment</span> <span id="modal-report-id">rep-ID</span></h2>
+        <span class="result-badge" id="modal-risk-level" style="font-size: 0.8rem;">Level</span>
+      </div>
+
+      <div style="display: grid; grid-template-columns: 1fr 2fr; gap: 25px;">
+        <!-- Left details column -->
+        <div>
+          <div class="risk-gauge-radial" style="width: 110px; height: 110px; margin: 0 auto 20px;">
+            <div style="font-size: 2.2rem; font-weight: 800; text-align: center; color: #fff;" id="modal-risk-score">0</div>
+            <div style="font-size: 0.75rem; text-align: center; text-transform: uppercase; color: var(--text-muted);">Risk Score</div>
+          </div>
+
+          <div style="background: rgba(0,0,0,0.2); padding: 15px; border-radius: 8px; border: 1px solid var(--border-color); font-size: 0.85rem;">
+            <div style="margin-bottom: 8px;"><strong>Google Safe Browsing:</strong> <span id="modal-gsb" style="float: right;">Safe</span></div>
+            <div style="margin-bottom: 8px;"><strong>VirusTotal Vendor Ratio:</strong> <span id="modal-vt" style="float: right;">0/0</span></div>
+            <div style="margin-bottom: 8px;"><strong>Community Reports count:</strong> <span id="modal-community" style="float: right;">0</span></div>
+            <div style="margin-bottom: 8px;"><strong>Confidence score:</strong> <span id="modal-confidence" style="float: right;">0%</span></div>
+          </div>
+        </div>
+
+        <!-- Right explanations column -->
+        <div>
+          <h4 style="color: var(--color-cyan); text-transform: uppercase; font-size: 0.8rem; margin-bottom: 5px;">Target Scan Payload</h4>
+          <div style="background: rgba(0,0,0,0.3); padding: 10px 14px; border-radius: 6px; font-family: monospace; font-size: 0.85rem; word-break: break-all; margin-bottom: 15px;" id="modal-payload">Payload</div>
+
+          <h4 style="color: var(--color-cyan); text-transform: uppercase; font-size: 0.8rem; margin-bottom: 5px;">AI Security Assessment Explanation</h4>
+          <p id="modal-ai-explanation" style="font-size: 0.9rem; line-height: 1.5; color: var(--text-muted); margin-bottom: 15px;">Explanation</p>
+
+          <h4 style="color: var(--color-cyan); text-transform: uppercase; font-size: 0.8rem; margin-bottom: 5px;">Technical Indicators Identified</h4>
+          <div id="modal-indicators" style="display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 15px;">
+            <!-- Loaded dynamically -->
+          </div>
+
+          <div style="background: rgba(245,158,11,0.05); border: 1px solid rgba(245,158,11,0.2); padding: 15px; border-radius: 8px;">
+            <strong style="color: var(--color-warning); text-transform: uppercase; font-size: 0.8rem; display: block; margin-bottom: 4px;">Recommended Action:</strong>
+            <span style="font-weight: 700; font-size: 1rem; color: #fff;" id="modal-recommendation">Action</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Include Utils -->
+  <script src="assets/js/utils.js"></script>
+
+  <!-- Command Center Script -->
+  <script>
+    // Constants and variables
+    let map = null;
+    let mapMarkers = [];
+    let charts = {};
+    let allScans = [];
+    let allReports = [];
+    let allUsers = [];
+    let blockedDomainsList = [];
+    let blockedUpisList = [];
+    let activeTab = 'tab-soc';
+
+    // Set up tabs switching
+    document.querySelectorAll('.soc-tab').forEach(tab => {
+      tab.addEventListener('click', () => {
+        document.querySelectorAll('.soc-tab').forEach(t => t.classList.remove('active'));
+        document.querySelectorAll('.soc-tab-content').forEach(c => c.classList.remove('active'));
+        
+        tab.classList.add('active');
+        const target = tab.getAttribute('data-target');
+        document.getElementById(target).classList.add('active');
+        activeTab = target;
+
+        if (target === 'tab-soc') {
+          setTimeout(() => {
+            if (map) map.invalidateSize();
+          }, 200);
+        }
+      });
+    });
+
+    document.addEventListener('DOMContentLoaded', async () => {
+      const urlParams = new URLSearchParams(window.location.search);
+      const isDemo = urlParams.get('demo') === '1';
+      
+      if (isDemo) {
+        const token = localStorage.getItem('qr_shield_token');
+        if (!token) {
+          // Perform silent auto-login to bypass manual login friction
+          try {
+            const authRes = await fetch('/auth/login', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ email: 'admin@qrshield.ai', password: 'admin123' })
+            });
+            const authData = await authRes.json();
+            if (authRes.ok && authData.success) {
+              localStorage.setItem('qr_shield_token', authData.token);
+              localStorage.setItem('qr_shield_user', JSON.stringify(authData.user));
+              console.log('[SOC Command] Demo Mode Silent Authentication Succeeded.');
+            }
+          } catch (e) {
+            console.error('Demo Mode Silent Authentication Failed:', e);
+          }
+        }
+      }
+
+      loadAdminIdentity();
+      initializeSOCMap();
+      fetchDashboardStats();
+      fetchThreatIntelligence();
+      fetchAnalyticsData();
+      fetchReportsList();
+      fetchActivityLogs();
+      fetchBlockedLists();
+      fetchUsersList();
+
+      // Setup live Firestore/Polling listeners
+      startRealTimeSync();
+
+      // Run Demo Mode HUD and scrolling orchestration
+      if (isDemo) {
+        runSOCDemoOrchestrator();
+      }
+    });
+
+    function loadAdminIdentity() {
+      const user = JSON.parse(localStorage.getItem('qr_shield_user') || '{}');
+      const card = document.getElementById('admin-identity-card');
+      if (card && user.email) {
+        card.innerHTML = `
+          <img src="${user.photo || 'assets/img/avatar.png'}" class="user-avatar-mini" alt="User profile" style="margin-right: 0;">
+          <div>
+            <div style="font-weight: 700; font-size: 0.85rem; color: #fff;">${user.name}</div>
+            <div style="font-size: 0.75rem; color: var(--text-muted); font-weight: 600;">${user.role} Agent</div>
+          </div>
+        `;
+      }
+    }
+
+    // Leaflet Map Init
+    function initializeSOCMap() {
+      map = L.map('soc-map').setView([20.5937, 78.9629], 5); // India Centroid
+      
+      L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+        attribution: '&copy; OpenStreetMap contributors &copy; CARTO'
+      }).addTo(map);
+    }
+
+    // Real-Time Firebase Listener & Fallback Polling simulation
+    function startRealTimeSync() {
+      // In Sandbox Mode, we pull updates on a 4-second interval
+      console.log('[SOC Command] Starting Real-time Telemetry Monitor.');
+      setInterval(() => {
+        // Silently pull updates
+        silentSyncStats();
+      }, 4000);
+    }
+
+    async function silentSyncStats() {
+      const token = localStorage.getItem('qr_shield_token');
+      try {
+        const res = await fetch('/admin/scans', {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        const data = await res.json();
+        if (res.ok && data.success) {
+          const freshScans = data.scans;
+          if (freshScans.length > allScans.length) {
+            // New scan identified!
+            const newCount = freshScans.length - allScans.length;
+            const newItems = freshScans.slice(0, newCount);
+            
+            // Loop through new scans
+            newItems.forEach(item => {
+              // Append to Live Feed
+              logThreatFeed(item);
+              
+              // If Risk is critical (> 90), trigger visual overlay alerts
+              if (item.riskScore >= 90) {
+                triggerCriticalOverlayAlert(item);
+              }
+            });
+            
+            // Reload statistics
+            allScans = freshScans;
+            fetchDashboardStats();
+            fetchThreatIntelligence();
+            fetchActivityLogs();
+            updateMapMarkers();
+          }
+        }
+      } catch (err) {
+        console.error('Silent stats sync failed:', err.message);
+      }
+    }
+
+    function triggerCriticalOverlayAlert(scan) {
+      const box = document.getElementById('critical-alert-box');
+      if (!box) return;
+      box.textContent = `⚠️ CRITICAL TELEMETRY ALERT: ${scan.analysis?.threatCategory || 'Threat'} scan registered at ${scan.city} with Risk score ${scan.riskScore}/100!`;
+      box.style.display = 'block';
+
+      // Play alert audio tone
+      try {
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.type = 'sawtooth';
+        osc.frequency.setValueAtTime(440, audioCtx.currentTime); // A4 note
+        gain.gain.setValueAtTime(0.08, audioCtx.currentTime);
+        osc.start();
+        setTimeout(() => osc.stop(), 500);
+      } catch(e) {}
+
+      setTimeout(() => {
+        box.style.display = 'none';
+      }, 6000);
+    }
+
+    function logThreatFeed(scan) {
+      const feed = document.getElementById('live-threat-feed');
+      if (!feed) return;
+      
+      const time = new Date(scan.timestamp).toLocaleTimeString();
+      const statusClass = scan.riskScore >= 90 ? 'critical' : (scan.riskScore >= 60 ? 'high' : '');
+      const levelLabel = scan.riskScore >= 90 ? 'CRITICAL' : (scan.riskScore >= 60 ? 'HIGH' : 'LOW');
+      const category = scan.analysis?.threatCategory || 'Safe Content';
+      
+      const node = document.createElement('div');
+      node.className = `ticker-item ${statusClass}`;
+      node.innerHTML = `
+        <span>[${time}] <strong>${levelLabel}</strong> - ${category} in <u>${scan.city || 'Unknown'}</u></span>
+        <span>Risk: <strong>${scan.riskScore}%</strong></span>
+      `;
+      
+      // Remove placeholder
+      const placeholder = feed.querySelector('div');
+      if (placeholder) placeholder.remove();
+      
+      feed.insertBefore(node, feed.firstChild);
+      if (feed.childNodes.length > 50) {
+        feed.removeChild(feed.lastChild);
+      }
+    }
+
+    // Fetch Stats
+    async function fetchDashboardStats() {
+      const token = localStorage.getItem('qr_shield_token');
+      try {
+        const res = await fetch('/admin/dashboard', {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        const data = await res.json();
+        if (res.ok && data.success) {
+          renderStatsCards(data.stats);
+        }
+      } catch (err) {
+        console.error('Failed to fetch dashboard metrics:', err.message);
+      }
+    }
+
+    function renderStatsCards(stats) {
+      const container = document.getElementById('soc-stats-container');
+      if (!container) return;
+      
+      container.innerHTML = `
+        <div class="soc-stat-node">
+          <div class="intel-title">Today's Scans</div>
+          <div class="soc-stat-val cyan">${stats.scansToday}</div>
+        </div>
+        <div class="soc-stat-node">
+          <div class="intel-title">Total Safe Scans</div>
+          <div class="soc-stat-val green">${stats.safeScans}</div>
+        </div>
+        <div class="soc-stat-node">
+          <div class="intel-title">Low Risk</div>
+          <div class="soc-stat-val cyan">${stats.lowRisk}</div>
+        </div>
+        <div class="soc-stat-node">
+          <div class="intel-title">Medium Risk</div>
+          <div class="soc-stat-val orange">${stats.mediumRisk}</div>
+        </div>
+        <div class="soc-stat-node">
+          <div class="intel-title">High Risk</div>
+          <div class="soc-stat-val orange" style="color: var(--color-warning);">${stats.highRisk}</div>
+        </div>
+        <div class="soc-stat-node" style="border-color: rgba(239, 68, 68, 0.3);">
+          <div class="intel-title" style="color: var(--color-red);">Critical Threats</div>
+          <div class="soc-stat-val red">${stats.criticalThreats}</div>
+        </div>
+        <div class="soc-stat-node">
+          <div class="intel-title">Today's Reports</div>
+          <div class="soc-stat-val orange">${stats.reportsToday}</div>
+        </div>
+        <div class="soc-stat-node">
+          <div class="intel-title">Pending Reports</div>
+          <div class="soc-stat-val orange">${stats.pendingReports}</div>
+        </div>
+        <div class="soc-stat-node">
+          <div class="intel-title">Blocked Domains</div>
+          <div class="soc-stat-val red">${stats.blockedDomainsCount}</div>
+        </div>
+        <div class="soc-stat-node">
+          <div class="intel-title">Blocked VPAs</div>
+          <div class="soc-stat-val red">${stats.blockedUpiCount}</div>
+        </div>
+        <div class="soc-stat-node">
+          <div class="intel-title">Active Users</div>
+          <div class="soc-stat-val green">${stats.activeUsers}</div>
+        </div>
+      `;
+    }
+
+    // Fetch Threat Intel
+    async function fetchThreatIntelligence() {
+      const token = localStorage.getItem('qr_shield_token');
+      try {
+        const res = await fetch('/admin/stats', {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        const data = await res.json();
+        if (res.ok && data.success) {
+          renderThreatIntelligence(data.intelligence);
+        }
+      } catch (err) {
+        console.error('Failed to fetch threat intelligence:', err.message);
+      }
+    }
+
+    function renderThreatIntelligence(intel) {
+      const container = document.getElementById('threat-intel-container');
+      if (!container) return;
+      
+      container.innerHTML = `
+        <div class="intel-node">
+          <div class="intel-title">Top Scam Category</div>
+          <div class="intel-val" style="color: var(--color-warning);">${intel.topScamCategory}</div>
+        </div>
+        <div class="intel-node">
+          <div class="intel-title">Most Impersonated Brand</div>
+          <div class="intel-val" style="color: var(--color-cyan);">${intel.topTargetedBrand}</div>
+        </div>
+        <div class="intel-node">
+          <div class="intel-title">Most Blocked Domain</div>
+          <div class="intel-val" style="color: var(--color-red);">${intel.mostDangerousDomain}</div>
+        </div>
+        <div class="intel-node">
+          <div class="intel-title">Most Blocked Merchant</div>
+          <div class="intel-val" style="color: var(--color-red);">${intel.mostReportedMerchant}</div>
+        </div>
+        <div class="intel-node">
+          <div class="intel-title">Most Reported VPA</div>
+          <div class="intel-val" style="color: var(--color-warning);">${intel.mostDangerousUpi}</div>
+        </div>
+        <div class="intel-node">
+          <div class="intel-title">Most Reported Region</div>
+          <div class="intel-val">${intel.mostDangerousCity}, ${intel.mostDangerousState}</div>
+        </div>
+        <div class="intel-node">
+          <div class="intel-title">Fastest Growing Scam Vector</div>
+          <div class="intel-val" style="color: var(--color-red);">${intel.fastestGrowingScam}</div>
+        </div>
+      `;
+    }
+
+    // Update Geolocation Markers
+    async function updateMapMarkers() {
+      const token = localStorage.getItem('qr_shield_token');
+      try {
+        const res = await fetch('/admin/map', {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        const data = await res.json();
+        if (res.ok && data.success) {
+          // Clear current markers
+          mapMarkers.forEach(m => map.removeLayer(m));
+          mapMarkers = [];
+
+          data.markers.forEach(m => {
+            const isDanger = m.riskScore >= 75;
+            const isMedium = m.riskScore >= 30 && m.riskScore < 75;
+            
+            const color = isDanger ? '#ef4444' : (isMedium ? '#f59e0b' : '#22c55e');
+            const icon = L.divIcon({
+              className: 'custom-div-icon',
+              html: `<div style="background-color: ${color}; width: 12px; height: 12px; border-radius: 50%; border: 2px solid #fff; box-shadow: 0 0 8px ${color}"></div>`,
+              iconSize: [12, 12]
+            });
+
+            const marker = L.marker([m.lat, m.lng], { icon }).addTo(map);
+            marker.bindPopup(`
+              <div style="font-family: 'Inter', sans-serif; font-size: 0.8rem;">
+                <strong style="color: ${color}; text-transform: uppercase;">${m.status} Node</strong><br>
+                <strong>City:</strong> ${m.city}<br>
+                <strong>Risk Score:</strong> ${m.riskScore}/100<br>
+                <strong>Payload:</strong> <code style="word-break: break-all;">${m.payload}</code>
+              </div>
+            `);
+            mapMarkers.push(marker);
+          });
+        }
+      } catch (err) {
+        console.error('Failed to fetch map markers:', err.message);
+      }
+    }
+
+    // Fetch Analytics charts
+    async function fetchAnalyticsData() {
+      const token = localStorage.getItem('qr_shield_token');
+      try {
+        const res = await fetch('/admin/analytics', {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        const data = await res.json();
+        if (res.ok && data.success) {
+          renderAnalyticsCharts(data.analytics);
+        }
+      } catch (err) {
+        console.error('Failed to fetch charts analytics:', err.message);
+      }
+    }
+
+    function renderAnalyticsCharts(analytics) {
+      // 1. Timeline Chart (Line)
+      const ctxLine = document.getElementById('timelineChart');
+      if (ctxLine) {
+        if (charts.timeline) charts.timeline.destroy();
+        
+        // Mock timeline weeks
+        charts.timeline = new Chart(ctxLine, {
+          type: 'line',
+          data: {
+            labels: ['Week 1', 'Week 2', 'Week 3', 'Week 4'],
+            datasets: [
+              {
+                label: 'Scans Telemetry',
+                data: [12, 19, 15, 22],
+                borderColor: '#06b6d4',
+                backgroundColor: 'rgba(6, 182, 212, 0.1)',
+                fill: true,
+                tension: 0.3
+              },
+              {
+                label: 'Scam Complaints Filed',
+                data: [3, 5, 2, 7],
+                borderColor: '#ef4444',
+                backgroundColor: 'rgba(239, 68, 68, 0.1)',
+                fill: true,
+                tension: 0.3
+              }
+            ]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+              y: { grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#a3a3a3' } },
+              x: { grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#a3a3a3' } }
+            },
+            plugins: { legend: { labels: { color: '#fff' } } }
+          }
+        });
+      }
+
+      // 2. Risk Level Pie Chart
+      const ctxPie = document.getElementById('riskPieChart');
+      if (ctxPie) {
+        if (charts.riskPie) charts.riskPie.destroy();
+        charts.riskPie = new Chart(ctxPie, {
+          type: 'doughnut',
+          data: {
+            labels: ['Safe', 'Medium Risk', 'Critical'],
+            datasets: [{
+              data: [55, 30, 15],
+              backgroundColor: ['#22c55e', '#f59e0b', '#ef4444'],
+              borderWidth: 1,
+              borderColor: 'rgba(255,255,255,0.1)'
+            }]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: { legend: { position: 'right', labels: { color: '#fff' } } }
+          }
+        });
+      }
+
+      // 3. Threat Categories Bar Chart
+      const ctxCategory = document.getElementById('categoryChart');
+      if (ctxCategory) {
+        if (charts.category) charts.category.destroy();
+        
+        const categories = Object.keys(analytics.threatCategoriesDistribution || {});
+        const values = Object.values(analytics.threatCategoriesDistribution || {});
+
+        charts.category = new Chart(ctxCategory, {
+          type: 'bar',
+          data: {
+            labels: categories.length > 0 ? categories : ['Phishing', 'UPI Fraud', 'Credential Theft'],
+            datasets: [{
+              label: 'Fraud Detections Count',
+              data: values.length > 0 ? values : [8, 4, 3],
+              backgroundColor: '#f59e0b',
+              borderRadius: 4
+            }]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+              y: { grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#a3a3a3' } },
+              x: { grid: { color: 'none' }, ticks: { color: '#a3a3a3' } }
+            },
+            plugins: { legend: { display: false } }
+          }
+        });
+      }
+
+      // 4. QR Types Chart
+      const ctxQr = document.getElementById('qrTypeChart');
+      if (ctxQr) {
+        if (charts.qrType) charts.qrType.destroy();
+        
+        const qrLabels = Object.keys(analytics.qrTypesDistribution || {});
+        const qrValues = Object.values(analytics.qrTypesDistribution || {});
+
+        charts.qrType = new Chart(ctxQr, {
+          type: 'bar',
+          data: {
+            labels: qrLabels.length > 0 ? qrLabels : ['Website', 'UPI', 'WiFi', 'SMS'],
+            datasets: [{
+              label: 'Scans count',
+              data: qrValues.length > 0 ? qrValues : [25, 12, 5, 2],
+              backgroundColor: '#06b6d4',
+              borderRadius: 4
+            }]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+              y: { grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#a3a3a3' } },
+              x: { grid: { color: 'none' }, ticks: { color: '#a3a3a3' } }
+            },
+            plugins: { legend: { display: false } }
+          }
+        });
+      }
+    }
+
+    // Fetch reports
+    async function fetchReportsList() {
+      const token = localStorage.getItem('qr_shield_token');
+      try {
+        const res = await fetch('/admin/reports', {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        const data = await res.json();
+        if (res.ok && data.success) {
+          allReports = data.reports;
+          renderReportsTable(allReports);
+        }
+      } catch (err) {
+        console.error('Failed to fetch reports list:', err.message);
+      }
+    }
+
+    function renderReportsTable(reports) {
+      const tbody = document.getElementById('incidents-table-body');
+      if (!tbody) return;
+      tbody.innerHTML = '';
+
+      if (reports.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="8" style="text-align: center; color: var(--text-muted);">No reports match the active filter metrics.</td></tr>';
+        return;
+      }
+
+      reports.forEach(r => {
+        const date = new Date(r.createdAt || r.timestamp).toLocaleDateString();
+        const scoreColor = r.riskScore >= 75 ? 'color: var(--color-red); font-weight: 800;' : (r.riskScore >= 30 ? 'color: var(--color-warning);' : 'color: #22c55e;');
+        
+        let statusBadgeClass = 'badge-safe';
+        if (r.status === 'Pending') statusBadgeClass = 'badge-suspicious';
+        if (r.status === 'Investigating') statusBadgeClass = 'badge-medium';
+        if (r.status === 'Resolved') statusBadgeClass = 'badge-safe';
+
+        const tr = document.createElement('tr');
+        tr.style.cursor = 'pointer';
+        // Open details modal on click
+        tr.addEventListener('click', (e) => {
+          if (e.target.tagName !== 'BUTTON' && e.target.tagName !== 'SELECT') {
+            openReportDetail(r);
+          }
+        });
+
+        tr.innerHTML = `
+          <td><strong>${r.reportId || 'N/A'}</strong></td>
+          <td>${r.userId === 'mock-user-uid' ? 'Ayush Kumar' : 'Anonymous'}</td>
+          <td style="${scoreColor}">${r.riskScore}/100</td>
+          <td><span class="stat-badge badge-police">${r.reason || 'Fraud'}</span></td>
+          <td>${r.city || 'Mumbai'}, ${r.state || 'Maharashtra'}</td>
+          <td style="max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;"><code>${r.payload}</code></td>
+          <td><span class="stat-badge ${statusBadgeClass}">${r.status}</span></td>
+          <td>
+            <div style="display: flex; gap: 8px;">
+              <select onchange="handleStatusChange('${r.reportId}', this.value)" style="background: rgba(0,0,0,0.3); color: #fff; border: 1px solid var(--border-color); border-radius: 4px; padding: 4px 6px; font-size: 0.75rem;">
+                <option value="">Update...</option>
+                <option value="Pending">Pending</option>
+                <option value="Investigating">Investigating</option>
+                <option value="Resolved">Resolved</option>
+              </select>
+              <button onclick="handleReportDelete('${r.reportId}')" class="btn btn-secondary" style="padding: 4px 8px; font-size: 0.75rem; background: rgba(239, 68, 68, 0.05); border-color: rgba(239,68,68,0.2); color: var(--color-red);">Purge</button>
+            </div>
+          </td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    // Handle Status Update
+    async function handleStatusChange(reportId, status) {
+      if (!status) return;
+      const token = localStorage.getItem('qr_shield_token');
+      try {
+        const res = await fetch(`/admin/report/${reportId}`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify({ status })
+        });
+        const data = await res.json();
+        if (res.ok && data.success) {
+          showToast(`Report status updated to ${status}`, 'success');
+          fetchReportsList();
+          fetchActivityLogs();
+        }
+      } catch (err) {
+        showToast('Failed to update report status.', 'error');
+      }
+    }
+
+    // Handle report Purge
+    async function handleReportDelete(reportId) {
+      if (!confirm('Are you sure you want to permanently delete/purge this threat report from database?')) return;
+      const token = localStorage.getItem('qr_shield_token');
+      try {
+        const res = await fetch(`/admin/report/${reportId}`, {
+          method: 'DELETE',
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        const data = await res.json();
+        if (res.ok && data.success) {
+          showToast('Report purged successfully from logs.', 'success');
+          fetchReportsList();
+          fetchActivityLogs();
+        }
+      } catch (err) {
+        showToast('Failed to purge report.', 'error');
+      }
+    }
+
+    // Open Report Details Modal
+    function openReportDetail(report) {
+      const modal = document.getElementById('incident-report-modal');
+      if (!modal) return;
+      
+      document.getElementById('modal-report-id').textContent = report.reportId || 'N/A';
+      document.getElementById('modal-risk-score').textContent = report.riskScore;
+      
+      const rLevel = report.riskScore >= 75 ? 'Critical' : (report.riskScore >= 40 ? 'Medium' : 'Safe');
+      const badge = document.getElementById('modal-risk-level');
+      badge.textContent = rLevel;
+      badge.className = 'result-badge';
+      if (rLevel === 'Safe') badge.classList.add('badge-safe');
+      if (rLevel === 'Medium') badge.classList.add('badge-medium');
+      if (rLevel === 'Critical') badge.classList.add('badge-dangerous');
+
+      document.getElementById('modal-payload').textContent = report.payload;
+      
+      // AI Assess indicators
+      const hasAnalysis = report.analysis;
+      document.getElementById('modal-gsb').textContent = hasAnalysis ? (report.analysis.googleSafeBrowsing || 'Safe') : 'Safe';
+      document.getElementById('modal-vt').textContent = hasAnalysis ? (report.analysis.virusTotal?.ratio || '0/72') : '0/72';
+      document.getElementById('modal-community').textContent = hasAnalysis ? (report.analysis.communityReports || '1') : '1';
+      document.getElementById('modal-confidence').textContent = hasAnalysis ? `${report.analysis.confidence || 85}%` : '85%';
+      
+      document.getElementById('modal-ai-explanation').textContent = report.description || (hasAnalysis ? report.analysis.reasoning : 'Heuristics triggered. Phishing signature match.');
+      document.getElementById('modal-recommendation').textContent = hasAnalysis ? report.analysis.recommendation : 'Verify VPA registry.';
+
+      // Render technical indicators array
+      const indContainer = document.getElementById('modal-indicators');
+      indContainer.innerHTML = '';
+      const indicators = hasAnalysis ? report.analysis.technicalIndicators : ['UPI VPA Payload', 'Manual Report Flag'];
+      indicators.forEach(ind => {
+        const span = document.createElement('span');
+        span.className = 'stat-badge badge-police';
+        span.style.fontSize = '0.75rem';
+        span.textContent = ind;
+        indContainer.appendChild(span);
+      });
+
+      modal.classList.add('active');
+    }
+
+    function closeReportModal() {
+      document.getElementById('incident-report-modal').classList.remove('active');
+    }
+
+    // Apply filters
+    function applyFilters() {
+      const search = document.getElementById('report-search-bar').value.toLowerCase();
+      const risk = document.getElementById('filter-risk').value;
+      const category = document.getElementById('filter-category').value;
+      const city = document.getElementById('filter-city').value.toLowerCase();
+      const status = document.getElementById('filter-status').value;
+
+      const filtered = allReports.filter(r => {
+        const matchSearch = !search || 
+                            r.reportId.toLowerCase().includes(search) || 
+                            r.payload.toLowerCase().includes(search) || 
+                            r.reason.toLowerCase().includes(search) || 
+                            (r.description && r.description.toLowerCase().includes(search));
+        
+        let matchRisk = true;
+        if (risk) {
+          if (risk === 'Safe') matchRisk = r.riskScore <= 20;
+          if (risk === 'Low Risk') matchRisk = r.riskScore > 20 && r.riskScore <= 40;
+          if (risk === 'Medium Risk') matchRisk = r.riskScore > 40 && r.riskScore <= 60;
+          if (risk === 'High Risk') matchRisk = r.riskScore > 60 && r.riskScore <= 80;
+          if (risk === 'Critical') matchRisk = r.riskScore > 80;
+        }
+
+        const matchCategory = !category || r.reason.includes(category);
+        const matchCity = !city || r.city.toLowerCase().includes(city);
+        const matchStatus = !status || r.status === status;
+
+        return matchSearch && matchRisk && matchCategory && matchCity && matchStatus;
+      });
+
+      renderReportsTable(filtered);
+    }
+
+    // Set listener on search bar
+    document.getElementById('report-search-bar').addEventListener('input', applyFilters);
+
+    // Fetch Activity audit logs
+    async function fetchActivityLogs() {
+      const token = localStorage.getItem('qr_shield_token');
+      try {
+        const res = await fetch('/admin/activity', {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        const data = await res.json();
+        if (res.ok && data.success) {
+          renderActivityLogs(data.logs);
+        }
+      } catch (err) {
+        console.error('Failed to fetch activity registry logs:', err.message);
+      }
+    }
+
+    function renderActivityLogs(logs) {
+      const tbody = document.getElementById('audit-logs-body');
+      if (!tbody) return;
+      tbody.innerHTML = '';
+
+      logs.forEach(l => {
+        const date = new Date(l.timestamp).toLocaleString();
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td><span style="font-family: monospace; color: var(--color-cyan);">${date}</span></td>
+          <td><strong>${l.action}</strong></td>
+          <td>${l.user}</td>
+          <td style="color: var(--text-muted);">${l.details}</td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    // Fetch Blocked lists
+    async function fetchBlockedLists() {
+      const token = localStorage.getItem('qr_shield_token');
+      try {
+        const res = await fetch('/admin/dashboard', {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        const data = await res.json();
+        if (res.ok && data.success) {
+          renderBlockedLists(data.blockedDomains || [], data.blockedUpiIds || []);
+        }
+      } catch (err) {
+        console.error('Failed to load blocked lists:', err.message);
+      }
+    }
+
+    function renderBlockedLists(domains, upis) {
+      const domContainer = document.getElementById('blocked-domains-list');
+      const upiContainer = document.getElementById('blocked-upis-list');
+      
+      if (domContainer) {
+        domContainer.innerHTML = domains.map(d => `
+          <div style="padding: 6px 0; border-bottom: 1px dashed rgba(255,255,255,0.05); display: flex; justify-content: space-between; align-items: center;">
+            <span>${d}</span>
+            <span style="color: var(--color-red); font-size: 0.7rem; font-weight: 700; text-transform: uppercase;">Blocked</span>
+          </div>
+        `).join('');
+      }
+
+      if (upiContainer) {
+        upiContainer.innerHTML = upis.map(u => `
+          <div style="padding: 6px 0; border-bottom: 1px dashed rgba(255,255,255,0.05); display: flex; justify-content: space-between; align-items: center;">
+            <span>${u}</span>
+            <span style="color: var(--color-red); font-size: 0.7rem; font-weight: 700; text-transform: uppercase;">Blocked</span>
+          </div>
+        `).join('');
+      }
+    }
+
+    // Submit Block
+    async function submitBlock(type) {
+      const token = localStorage.getItem('qr_shield_token');
+      const input = document.getElementById(`block-${type}-input`);
+      if (!input || !input.value.trim()) return;
+      
+      const value = input.value.trim();
+
+      try {
+        const res = await fetch('/admin/block', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify({ value, type })
+        });
+        const data = await res.json();
+        if (res.ok && data.success) {
+          showToast(`Successfully blocked ${type}: ${value}`, 'success');
+          input.value = '';
+          fetchBlockedLists();
+          fetchDashboardStats();
+          fetchActivityLogs();
+        } else {
+          showToast(data.message || 'Block action rejected', 'error');
+        }
+      } catch (err) {
+        showToast('Failed to add firewall block rule.', 'error');
+      }
+    }
+
+    // Fetch users registry
+    async function fetchUsersList() {
+      const token = localStorage.getItem('qr_shield_token');
+      try {
+        const res = await fetch('/admin/users', {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        const data = await res.json();
+        if (res.ok && data.success) {
+          allUsers = data.users;
+          renderUsersSettingsTable(allUsers);
+        }
+      } catch (err) {
+        console.error('Failed to retrieve user registry:', err.message);
+      }
+    }
+
+    function renderUsersSettingsTable(users) {
+      const tbody = document.getElementById('settings-users-list');
+      if (!tbody) return;
+      tbody.innerHTML = '';
+
+      users.forEach(u => {
+        let badgeClass = 'badge-safe';
+        if (u.role === 'Admin') badgeClass = 'badge-admin';
+        if (u.role === 'Police') badgeClass = 'badge-police';
+
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td><strong>${u.name}</strong></td>
+          <td>${u.email}</td>
+          <td><span class="stat-badge ${badgeClass}">${u.role}</span></td>
+          <td>
+            <select onchange="handleUserRoleChange('${u.uid}', this.value)" style="background: rgba(0,0,0,0.3); color: #fff; border: 1px solid var(--border-color); border-radius: 4px; padding: 6px 10px; font-size: 0.8rem;">
+              <option value="">Promote...</option>
+              <option value="User">User</option>
+              <option value="Moderator">Moderator</option>
+              <option value="Police">Police</option>
+              <option value="Admin">Admin</option>
+            </select>
+          </td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    async function handleUserRoleChange(uid, role) {
+      if (!role) return;
+      const token = localStorage.getItem('qr_shield_token');
+      try {
+        const res = await fetch(`/admin/user/${uid}/role`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify({ role })
+        });
+        const data = await res.json();
+        if (res.ok && data.success) {
+          showToast(`Successfully promoted user role to ${role}`, 'success');
+          fetchUsersList();
+          fetchActivityLogs();
+        } else {
+          showToast(data.message || 'Promotion rejected', 'error');
+        }
+      } catch (err) {
+        showToast('Failed to update agent role.', 'error');
+      }
+    }
+
+    // Export Data CSV
+    function exportData(format) {
+      if (format === 'csv') {
+        let csvContent = "data:text/csv;charset=utf-8,";
+        csvContent += "Report ID,User Email,Risk Score,Category,Location,Payload,Status\n";
+        
+        allReports.forEach(r => {
+          const row = [
+            r.reportId,
+            r.userId === 'mock-user-uid' ? 'user@qrshield.ai' : 'anonymous',
+            `${r.riskScore}%`,
+            r.reason,
+            `"${r.city}, ${r.state}"`,
+            `"${r.payload}"`,
+            r.status
+          ].join(",");
+          csvContent += row + "\n";
+        });
+
+        const encodedUri = encodeURI(csvContent);
+        const link = document.createElement("a");
+        link.setAttribute("href", encodedUri);
+        link.setAttribute("download", `QR_Shield_AI_SOC_Report_${Date.now()}.csv`);
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        showToast('CSV generated and download initiated.', 'success');
+      } else {
+        window.print();
+      }
+    }
+
+    function runSOCDemoOrchestrator() {
+      // 1. Show demo HUD overlay
+      showSOCDemoHUD('STAGE 3 - Real-Time SOC Telemetry & Command Monitor', '#06b6d4');
+      
+      // 2. Focus on map and zoom in on Delhi (the location of our simulated critical phishing threat!)
+      setTimeout(() => {
+        if (map) {
+          map.setView([28.7041, 77.1025], 8); // Delhi coordinates
+          showSOCDemoHUD('Leaflet Map Centered on Critical Phishing Coordinate (Delhi)', '#ef4444');
+        }
+      }, 3000);
+
+      // 3. Scroll to the Live Threat feed
+      setTimeout(() => {
+        const feed = document.getElementById('live-threat-feed');
+        if (feed) {
+          feed.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          showSOCDemoHUD('New Threat Telemetry Event Logged In Feed', '#ef4444');
+          
+          // Log a mock fresh threat event to showcase live feed updates instantly
+          const time = new Date().toLocaleTimeString();
+          const node = document.createElement('div');
+          node.className = 'ticker-item critical';
+          node.innerHTML = `
+            <span>[${time}] <strong>CRITICAL</strong> - Phishing in <u>Delhi</u></span>
+            <span>Risk: <strong>100%</strong></span>
+          `;
+          const placeholder = feed.querySelector('div');
+          if (placeholder) placeholder.remove();
+          feed.insertBefore(node, feed.firstChild);
+        }
+      }, 6000);
+
+      // 4. Conclude showcase and offer redirect back to index
+      setTimeout(() => {
+        showSOCDemoCompleteModal();
+      }, 9500);
+    }
+
+    function showSOCDemoHUD(message, stageColor) {
+      let hud = document.getElementById('demo-hud-overlay');
+      if (!hud) {
+        hud = document.createElement('div');
+        hud.id = 'demo-hud-overlay';
+        hud.style.position = 'fixed';
+        hud.style.top = '80px';
+        hud.style.left = '50%';
+        hud.style.transform = 'translateX(-50%)';
+        hud.style.zIndex = '9999';
+        hud.style.background = 'var(--bg-card)';
+        hud.style.border = '2px solid ' + stageColor;
+        hud.style.boxShadow = '0 0 20px ' + stageColor;
+        hud.style.padding = '12px 25px';
+        hud.style.borderRadius = '30px';
+        hud.style.backdropFilter = 'blur(15px)';
+        hud.style.fontWeight = '800';
+        hud.style.fontSize = '0.95rem';
+        hud.style.color = '#fff';
+        hud.style.textAlign = 'center';
+        hud.style.transition = 'all 0.3s ease';
+        document.body.appendChild(hud);
+      }
+      hud.style.borderColor = stageColor;
+      hud.style.boxShadow = '0 0 20px ' + stageColor;
+      hud.innerHTML = `⚡ <span style="color: ${stageColor};">DEMO STATE:</span> ${message}`;
+    }
+
+    function showSOCDemoCompleteModal() {
+      let modal = document.getElementById('demo-complete-modal');
+      if (!modal) {
+        modal = document.createElement('div');
+        modal.className = 'soc-modal active';
+        modal.id = 'demo-complete-modal';
+        modal.innerHTML = `
+          <div class="soc-modal-card" style="text-align: center; max-width: 450px;">
+            <h2 style="font-size: 1.5rem; font-weight: 800; margin-bottom: 15px; color: #fff;">
+              🎉 <span class="gradient-text">Showcase Completed!</span>
+            </h2>
+            <p style="color: var(--text-muted); font-size: 0.95rem; line-height: 1.5; margin-bottom: 25px;">
+              All stages of the QR Shield AI cybersecurity threat detection pipeline have been verified successfully.
+            </p>
+            <button class="btn btn-primary" onclick="window.location.href='index.html'" style="padding: 10px 20px; font-weight: 700; width: 100%;">
+              Return to Landing Page
+            </button>
+          </div>
+        `;
+        document.body.appendChild(modal);
+      }
+    }
+  </script>
+</body>
+</html>

@@ -7,7 +7,7 @@ document.addEventListener('DOMContentLoaded', () => {
   initHistoryView();
 });
 
-function initHistoryView() {
+async function initHistoryView() {
   const searchInput = document.getElementById('history-search');
   const typeFilter = document.getElementById('filter-type');
   const riskFilter = document.getElementById('filter-risk');
@@ -15,7 +15,7 @@ function initHistoryView() {
   const exportBtn = document.getElementById('export-history-btn');
 
   // Load and render history lists on launch
-  renderHistoryTable();
+  await renderHistoryTable();
 
   // Search & Filter event binds
   if (searchInput) {
@@ -39,14 +39,14 @@ function initHistoryView() {
   }
 }
 
-function getStoredHistory() {
+async function getStoredHistory() {
   if (window.QRShieldUtils && window.QRShieldUtils.getScanHistory) {
-    return window.QRShieldUtils.getScanHistory();
+    return await window.QRShieldUtils.getScanHistory();
   }
   return [];
 }
 
-function renderHistoryTable(filteredLogs = null) {
+async function renderHistoryTable(filteredLogs = null) {
   const tableBody = document.getElementById('history-table-body');
   const emptyState = document.getElementById('history-empty-state');
   const tableContainer = document.getElementById('history-table-container');
@@ -55,7 +55,7 @@ function renderHistoryTable(filteredLogs = null) {
   
   if (!tableBody) return;
 
-  const logs = filteredLogs !== null ? filteredLogs : getStoredHistory();
+  const logs = filteredLogs !== null ? filteredLogs : await getStoredHistory();
 
   // Handle empty state layout updates
   if (logs.length === 0) {
@@ -119,7 +119,7 @@ function renderHistoryTable(filteredLogs = null) {
   });
 }
 
-function applyFilters() {
+async function applyFilters() {
   const searchInput = document.getElementById('history-search');
   const typeFilter = document.getElementById('filter-type');
   const riskFilter = document.getElementById('filter-risk');
@@ -128,7 +128,7 @@ function applyFilters() {
   const typeVal = typeFilter ? typeFilter.value : 'All';
   const riskVal = riskFilter ? riskFilter.value : 'All';
 
-  const allLogs = getStoredHistory();
+  const allLogs = await getStoredHistory();
   
   const filtered = allLogs.filter(log => {
     const matchesSearch = log.content.toLowerCase().includes(query) || log.type.toLowerCase().includes(query);
@@ -138,7 +138,7 @@ function applyFilters() {
     return matchesSearch && matchesType && matchesRisk;
   });
 
-  renderHistoryTable(filtered);
+  await renderHistoryTable(filtered);
 }
 
 window.handleDeleteHistoryItem = function(id) {
@@ -161,11 +161,11 @@ window.handleDeleteHistoryItem = function(id) {
   }
 };
 
-function handleClearAllHistory() {
+async function handleClearAllHistory() {
   if (confirm('Are you absolutely sure you want to clear your entire scanning history? This cannot be undone.')) {
     if (window.QRShieldUtils && window.QRShieldUtils.clearScanHistory) {
       window.QRShieldUtils.clearScanHistory();
-      renderHistoryTable();
+      await renderHistoryTable();
       window.QRShieldUtils.showToast('All security scan records deleted.', 'warning');
     }
   }
