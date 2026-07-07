@@ -157,17 +157,34 @@
 
           QRShieldUtils.showLoading('Verifying Identity...', 'Decrypting security signature');
 
+          const controller = new AbortController();
+          const timeoutId = setTimeout(() => controller.abort(), 60000);
+
           try {
             const response = await fetch(`${API_BASE_URL}/auth/login`, {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ email, password })
+              body: JSON.stringify({ email, password }),
+              signal: controller.signal
             });
 
-            const data = await response.json();
-            QRShieldUtils.hideLoading();
+            const responseText = await response.text();
+            let data = {};
+            if (responseText) {
+              try {
+                data = JSON.parse(responseText);
+              } catch (parseErr) {
+                console.error('JSON parsing error:', parseErr);
+              }
+            }
 
-            if (response.ok && data.success) {
+            if (!response.ok) {
+              const errMsg = data.message || `Login failed. Server returned HTTP ${response.status}.`;
+              QRShieldUtils.showToast(errMsg, 'error');
+              return;
+            }
+
+            if (data.success) {
               QRShieldUtils.showToast(data.message || 'Access Authorized!', 'success');
               // Save token and user details
               localStorage.setItem('qr_shield_token', data.token);
@@ -185,9 +202,15 @@
               QRShieldUtils.showToast(data.message || 'Authentication rejected.', 'error');
             }
           } catch (err) {
-            QRShieldUtils.hideLoading();
             console.error('Login request failure:', err);
-            QRShieldUtils.showToast('Network interface timeout. Could not reach server.', 'error');
+            if (err.name === 'AbortError') {
+              QRShieldUtils.showToast('Server is taking too long to respond. Please retry.', 'error');
+            } else {
+              QRShieldUtils.showToast('Unable to reach the security server. Please check backend availability and retry.', 'error');
+            }
+          } finally {
+            clearTimeout(timeoutId);
+            QRShieldUtils.hideLoading();
           }
         });
       }
