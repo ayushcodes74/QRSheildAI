@@ -352,7 +352,7 @@ async function apiFetch(endpoint, options = {}, timeoutMs = 15000) {
     const duration = Date.now() - startTime;
     
     if (err.name === 'AbortError') {
-      showToast('Request timed out. The server might be starting up. Please try again.', 'warning');
+      showToast('Request timed out while contacting the threat intelligence server. Please check your network connection and try again.', 'warning');
     } else {
       if (duration > 8000) {
         showToast('Server is starting up (Render Cold Start). Please wait 15 seconds and try again.', 'info');

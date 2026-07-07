@@ -298,7 +298,7 @@ function handleScanSuccess(decodedText) {
           latitude: 19.0760,
           longitude: 72.8777
         })
-      });
+      }, 60000);
 
       data = await res.json();
       if (res.ok && data.success) {
