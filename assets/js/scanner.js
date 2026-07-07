@@ -309,12 +309,23 @@ function handleScanSuccess(decodedText) {
         isBackendSuccess = true;
         console.log('[Scanner] Dynamic backend threat report retrieved:', analysis);
       } else {
-        throw new Error(data.message || 'API request rejected');
+        const apiErr = new Error(data.message || 'API request rejected');
+        apiErr.name = 'APIError';
+        throw apiErr;
       }
     } catch (err) {
-      console.warn('[Scanner] Threat Intelligence API unreachable. Falling back to offline heuristics:', err.message);
+      console.error('[Scanner] Primary backend scan failed', {
+        errorName: err.name,
+        errorMessage: err.message,
+        apiBaseUrl: API_BASE_URL,
+        endpoint: `${API_BASE_URL}/scan`,
+        online: navigator.onLine
+      });
       if (window.QRShieldAnalysis) {
         analysis = window.QRShieldAnalysis.analyzeQRContent(decodedText);
+        if (analysis) {
+          analysis.isOfflineFallback = true;
+        }
       }
     }
 
@@ -389,6 +400,27 @@ function displayAnalysisResults(analysis) {
   // Show page content
   resultCard.classList.add('visible');
   resultCard.scrollIntoView({ behavior: 'smooth', block: 'start' });
+
+  // If fallback, add offline warning label/banner
+  let offlineBanner = document.getElementById('res-offline-banner');
+  if (offlineBanner) {
+    offlineBanner.remove();
+  }
+  if (analysis.isOfflineFallback) {
+    const banner = document.createElement('div');
+    banner.id = 'res-offline-banner';
+    banner.style.background = 'rgba(245, 158, 11, 0.08)';
+    banner.style.border = '1px solid rgba(245, 158, 11, 0.3)';
+    banner.style.color = '#f59e0b';
+    banner.style.padding = '12px 16px';
+    banner.style.borderRadius = '8px';
+    banner.style.marginBottom = '20px';
+    banner.style.fontSize = '0.85rem';
+    banner.style.fontWeight = '700';
+    banner.style.textAlign = 'center';
+    banner.innerHTML = '⚠ OFFLINE FALLBACK: Threat Engine Server Unreachable. Result compiled using client-side heuristic engines only.';
+    resultCard.insertBefore(banner, resultCard.firstChild);
+  }
   
   // Basic content
   if (typeEl) typeEl.textContent = analysis.type;

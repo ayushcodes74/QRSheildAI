@@ -345,20 +345,31 @@ async function apiFetch(endpoint, options = {}, timeoutMs = 15000) {
       } else {
         showToast(`Server returned status: ${res.status}`, 'error');
       }
+      
+      const httpErr = new Error(`HTTP ${res.status}: ${res.statusText}`);
+      httpErr.name = 'HTTPError';
+      httpErr.status = res.status;
+      throw httpErr;
     }
     return res;
   } catch (err) {
     clearTimeout(id);
     const duration = Date.now() - startTime;
     
+    if (err.name === 'HTTPError') {
+      throw err;
+    }
+    
     if (err.name === 'AbortError') {
       showToast('Request timed out while contacting the threat intelligence server. Please check your network connection and try again.', 'warning');
-    } else {
+    } else if (err.name === 'TypeError' || err.message === 'Failed to fetch') {
       if (duration > 8000) {
         showToast('Server is starting up (Render Cold Start). Please wait 15 seconds and try again.', 'info');
       } else {
-        showToast('Network error: Unable to connect to backend server.', 'error');
+        showToast('Network error: Unable to connect to backend server. Possible CORS or connectivity failure.', 'error');
       }
+    } else {
+      showToast(`Interface error: ${err.message}`, 'error');
     }
     throw err;
   }
@@ -403,31 +414,6 @@ async function addScanToHistory(scanRecord) {
   localHistory.unshift(localRecord);
   if (localHistory.length > 100) localHistory.pop();
   localStorage.setItem(STORAGE_KEYS.HISTORY, JSON.stringify(localHistory));
-
-  // Sync to backend if logged in
-  const token = localStorage.getItem('qr_shield_token');
-  const headers = { 'Content-Type': 'application/json' };
-  if (token) {
-    headers['Authorization'] = `Bearer ${token}`;
-  }
-
-  try {
-    await apiFetch(`${API_BASE_URL}/scan`, {
-      method: 'POST',
-      headers,
-      body: JSON.stringify({
-        payload: scanRecord.content,
-        qrType: scanRecord.type,
-        riskScore: scanRecord.riskScore,
-        status: scanRecord.riskLevel,
-        city: 'Mumbai', // Default region
-        latitude: 19.0760,
-        longitude: 72.8777
-      })
-    });
-  } catch (err) {
-    console.error('Failed to log scan to server:', err);
-  }
 
   return localRecord;
 }

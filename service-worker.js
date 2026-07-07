@@ -1,4 +1,4 @@
-const CACHE_NAME = 'qr-shield-v3';
+const CACHE_NAME = 'qr-shield-v4';
 const ASSETS_TO_CACHE = [
   '/',
   '/index.html',
