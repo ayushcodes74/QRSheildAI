@@ -289,7 +289,7 @@ function handleScanSuccess(decodedText) {
     let data = null;
 
     try {
-      const res = await fetch('/scan', {
+      const res = await apiFetch(`${API_BASE_URL}/scan`, {
         method: 'POST',
         headers,
         body: JSON.stringify({

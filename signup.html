@@ -124,6 +124,7 @@
   </footer>
 
   <!-- Include Scripts -->
+  <script src="assets/js/config.js"></script>
   <script src="assets/js/utils.js"></script>
   
   <script>
@@ -160,7 +161,7 @@
           QRShieldUtils.showLoading('Creating Profile...', 'Writing database authorization entries');
 
           try {
-            const response = await fetch('/auth/signup', {
+            const response = await fetch(`${API_BASE_URL}/auth/signup`, {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({ name, email, password, photo: photo || null })

@@ -1,4 +1,4 @@
-const CACHE_NAME = 'qr-shield-v1';
+const CACHE_NAME = 'qr-shield-v2';
 const ASSETS_TO_CACHE = [
   '/',
   '/index.html',
@@ -8,6 +8,7 @@ const ASSETS_TO_CACHE = [
   '/about.html',
   '/offline.html',
   '/assets/css/style.css',
+  '/assets/js/config.js',
   '/assets/js/utils.js',
   '/assets/js/analysis.js',
   '/assets/js/scanner.js',
@@ -45,6 +46,21 @@ self.addEventListener('fetch', (event) => {
   // Only cache GET requests
   if (event.request.method !== 'GET') return;
 
+  const url = new URL(event.request.url);
+  // Bypass caching/interception for backend API requests
+  if (
+    url.pathname.startsWith('/auth/') ||
+    url.pathname.startsWith('/user/') ||
+    url.pathname.startsWith('/scan') ||
+    url.pathname.startsWith('/scans') ||
+    url.pathname.startsWith('/report') ||
+    url.pathname.startsWith('/admin/') ||
+    url.hostname.includes('onrender.com') ||
+    url.port === '5000'
+  ) {
+    return;
+  }
+
   event.respondWith(
     fetch(event.request)
       .then((networkResponse) => {
@@ -61,7 +77,7 @@ self.addEventListener('fetch', (event) => {
             return cachedResponse;
           }
           // If request is an HTML page and fetch failed, load offline fallback page
-          if (event.request.headers.get('accept').includes('text/html')) {
+          if (event.request.headers.get('accept') && event.request.headers.get('accept').includes('text/html')) {
             return caches.match('/offline.html');
           }
         });

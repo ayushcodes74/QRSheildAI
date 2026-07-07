@@ -318,6 +318,52 @@ function getLocalScamReports() {
   }
 }
 
+// Generic fetch wrapper with timeout, cold start detection and user friendly error handling
+async function apiFetch(endpoint, options = {}, timeoutMs = 15000) {
+  const controller = new AbortController();
+  const id = setTimeout(() => controller.abort(), timeoutMs);
+  
+  const finalOptions = {
+    ...options,
+    signal: controller.signal
+  };
+  
+  const startTime = Date.now();
+  try {
+    const res = await fetch(endpoint, finalOptions);
+    clearTimeout(id);
+    
+    if (!res.ok) {
+      if (res.status === 401) {
+        showToast('Session expired or Unauthorized. Please log in again.', 'warning');
+      } else if (res.status === 403) {
+        showToast('Forbidden: You do not have permission for this resource.', 'error');
+      } else if (res.status === 429) {
+        showToast('Too many requests. Please try again later.', 'warning');
+      } else if (res.status === 500) {
+        showToast('Internal Server Error. Please contact support.', 'error');
+      } else {
+        showToast(`Server returned status: ${res.status}`, 'error');
+      }
+    }
+    return res;
+  } catch (err) {
+    clearTimeout(id);
+    const duration = Date.now() - startTime;
+    
+    if (err.name === 'AbortError') {
+      showToast('Request timed out. The server might be starting up. Please try again.', 'warning');
+    } else {
+      if (duration > 8000) {
+        showToast('Server is starting up (Render Cold Start). Please wait 15 seconds and try again.', 'info');
+      } else {
+        showToast('Network error: Unable to connect to backend server.', 'error');
+      }
+    }
+    throw err;
+  }
+}
+
 // Async API-integrated Helpers
 async function getScanHistory() {
   const token = localStorage.getItem('qr_shield_token');
@@ -326,7 +372,7 @@ async function getScanHistory() {
   }
 
   try {
-    const res = await fetch('/scans', {
+    const res = await apiFetch(`${API_BASE_URL}/scans`, {
       headers: { 'Authorization': `Bearer ${token}` }
     });
     const data = await res.json();
@@ -366,7 +412,7 @@ async function addScanToHistory(scanRecord) {
   }
 
   try {
-    await fetch('/scan', {
+    await apiFetch(`${API_BASE_URL}/scan`, {
       method: 'POST',
       headers,
       body: JSON.stringify({
@@ -404,7 +450,7 @@ async function getScamReports() {
   }
 
   try {
-    const res = await fetch('/reports', {
+    const res = await apiFetch(`${API_BASE_URL}/reports`, {
       headers: { 'Authorization': `Bearer ${token}` }
     });
     const data = await res.json();
@@ -443,7 +489,7 @@ async function saveScamReport(report) {
   }
 
   try {
-    await fetch('/report', {
+    await apiFetch(`${API_BASE_URL}/report`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
