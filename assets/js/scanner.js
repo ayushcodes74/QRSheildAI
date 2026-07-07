@@ -50,7 +50,11 @@ function initScannerUI() {
       }
     });
     
-    dropZone.addEventListener('click', () => {
+    dropZone.addEventListener('click', (e) => {
+      if (e.target.closest('button, input, a')) {
+        return;
+      }
+
       fileInput.click();
     });
   }
