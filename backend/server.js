@@ -25,10 +25,24 @@ app.use(helmet({
   }
 }));
 
+const allowedOrigins = [
+  'http://localhost:5500',
+  'http://127.0.0.1:5500',
+  process.env.FRONTEND_URL
+].filter(Boolean);
+
 app.use(cors({
-  origin: '*', // Allow all origins for local deployment, can be configured for production
+  origin: function (origin, callback) {
+    if (!origin) return callback(null, true);
+    if (allowedOrigins.indexOf(origin) !== -1 || allowedOrigins.includes('*')) {
+      return callback(null, true);
+    } else {
+      return callback(new Error('Not allowed by CORS'));
+    }
+  },
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization']
+  allowedHeaders: ['Content-Type', 'Authorization'],
+  credentials: true
 }));
 
 // Rate Limiting to prevent brute-force attacks and abuse
@@ -73,6 +87,15 @@ const authRoutes = require('./routes/authRoutes');
 const scanRoutes = require('./routes/scanRoutes');
 const reportRoutes = require('./routes/reportRoutes');
 const adminRoutes = require('./routes/adminRoutes');
+
+// Health Endpoint (public)
+app.get('/health', (req, res) => {
+  res.status(200).json({
+    success: true,
+    service: "QR Shield AI Backend",
+    status: "healthy"
+  });
+});
 
 // Mount routes directly at root level as specified in REST API specifications
 app.use(authRoutes);
