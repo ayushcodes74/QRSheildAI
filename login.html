@@ -129,6 +129,8 @@
   <script src="assets/js/utils.js"></script>
   
   <script>
+    const API_BASE_URL = 'http://localhost:5000';
+
     document.addEventListener('DOMContentLoaded', () => {
       // Setup Login Form submission
       const loginForm = document.getElementById('auth-login-form');
@@ -156,7 +158,7 @@
           QRShieldUtils.showLoading('Verifying Identity...', 'Decrypting security signature');
 
           try {
-            const response = await fetch('/auth/login', {
+            const response = await fetch(`${API_BASE_URL}/auth/login`, {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({ email, password })
@@ -199,7 +201,7 @@
           const idToken = mockToken || 'mock-google-token-admin';
 
           try {
-            const response = await fetch('/auth/google', {
+            const response = await fetch(`${API_BASE_URL}/auth/google`, {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({ idToken })

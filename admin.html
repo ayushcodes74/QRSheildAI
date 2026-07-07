@@ -352,7 +352,7 @@
     <div class="soc-header-bar">
       <div>
         <span class="result-badge badge-dangerous" style="text-transform: uppercase; font-size: 0.75rem; letter-spacing: 1.5px; padding: 4px 12px; margin-bottom: 10px; display: inline-block;">POLICE THREAT INTELLIGENCE PORTAL</span>
-        <h1 style="font-size: 2.2rem; font-weight: 800; margin-bottom: 5px;">SOC Fraud Command <span class="gradient-text">Console</span></h1>
+        <h1 style="font-size: 2.2rem; font-weight: 800; margin-bottom: 5px;">Police Threat Intelligence <span class="gradient-text">Console</span></h1>
         <p style="font-size: 0.95rem; color: var(--text-muted);">Real-time monitoring telemetry, interactive geolocational maps, and deep AI threat analytics.</p>
       </div>
       <div id="admin-identity-card" class="glass-card" style="padding: 12px 20px; display: flex; align-items: center; gap: 12px; border-radius: 10px;">
@@ -364,8 +364,8 @@
     <div class="soc-tabs-strip">
       <div class="soc-tab active" data-target="tab-soc">SOC Command Monitor</div>
       <div class="soc-tab" data-target="tab-analytics">Cyber Threat Analytics</div>
-      <div class="soc-tab" data-target="tab-reports">Incident Desk Reports</div>
-      <div class="soc-tab" data-target="tab-audits">Audit Activity Registry</div>
+      <div class="soc-tab" data-target="tab-reports">Incident Reports</div>
+      <div class="soc-tab" data-target="tab-audits">Audit Activity</div>
       <div class="soc-tab" data-target="tab-settings">Administrative Settings</div>
     </div>
 
@@ -401,6 +401,65 @@
           </h3>
           <div class="ticker-feed" id="live-threat-feed">
             <div style="text-align: center; color: var(--text-muted); margin-top: 150px;">Awaiting telemetry logs stream...</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Operational Section -->
+      <div style="margin-top: 25px; display: grid; grid-template-columns: 2fr 1fr; gap: 25px;">
+        <!-- Recent Dangerous Scans -->
+        <div class="glass-card" style="padding: 24px; border-radius: 12px;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; flex-wrap: wrap; gap: 10px;">
+            <h3 class="soc-card-title" style="margin-bottom: 0; border: none; padding: 0;">
+              Recent Dangerous Scans
+            </h3>
+            <span id="live-indicator" style="font-size: 0.8rem; font-weight: 800; color: #22c55e;">LIVE MONITORING ●</span>
+          </div>
+          <div class="data-table-container">
+            <table class="admin-table">
+              <thead>
+                <tr>
+                  <th>Timestamp</th>
+                  <th>Location</th>
+                  <th>Type</th>
+                  <th>Category</th>
+                  <th>Risk Score</th>
+                  <th>Payload</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody id="dangerous-scans-body">
+                <tr><td colspan="7" style="text-align: center; color: var(--text-muted);">No dangerous threats detected yet.</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <div style="text-align: right; margin-top: 15px; display: none;" id="view-all-threats-btn-container">
+            <button class="btn btn-secondary" onclick="viewAllThreats()" style="padding: 6px 12px; font-size: 0.8rem;">View All Threats</button>
+          </div>
+        </div>
+
+        <!-- Critical Incident CTA & Live Monitoring Status -->
+        <div class="glass-card" style="padding: 24px; border-radius: 12px; display: flex; flex-direction: column; justify-content: space-between;">
+          <div>
+            <h3 class="soc-card-title">System Status</h3>
+            <div style="margin-bottom: 15px;">
+              <span id="hud-last-updated" style="font-size: 0.85rem; color: var(--text-muted);">Last updated: --:--:--</span>
+            </div>
+            <div id="critical-cta-box" style="display: none; background: rgba(239, 68, 68, 0.08); border: 1px solid rgba(239, 68, 68, 0.3); padding: 15px; border-radius: 8px;">
+              <span style="color: var(--color-red); font-weight: 800; font-size: 0.9rem; display: block; margin-bottom: 8px;">🚨 CRITICAL ACTION REQUIRED</span>
+              <p style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 15px; line-height: 1.4;">
+                Multiple critical security incidents have been logged. Please inspect and verify VPA/Domain mappings immediately.
+              </p>
+              <button class="btn btn-primary" onclick="investigateCriticalIncidents()" style="background: var(--color-red); border-color: var(--color-red); width: 100%; font-size: 0.85rem; height: 36px; box-shadow: 0 0 10px rgba(239,68,68,0.4);">
+                Investigate Critical Incidents
+              </button>
+            </div>
+            <div id="no-critical-cta-box" style="background: rgba(34, 197, 94, 0.08); border: 1px solid rgba(34, 197, 94, 0.3); padding: 15px; border-radius: 8px;">
+              <span style="color: #22c55e; font-weight: 800; font-size: 0.9rem; display: block; margin-bottom: 8px;">✔ SYSTEM SECURE</span>
+              <p style="font-size: 0.8rem; color: var(--text-muted); line-height: 1.4; margin-bottom: 0;">
+                No unresolved critical threats are currently flagged on the firewall logs.
+              </p>
+            </div>
           </div>
         </div>
       </div>
@@ -609,48 +668,137 @@
        DETAILED AI SECURITY REPORT MODAL OVERLAY
        ========================================== -->
   <div class="soc-modal" id="incident-report-modal">
-    <div class="soc-modal-card">
+    <div class="soc-modal-card" style="max-width: 900px; width: 95%;">
       <button onclick="closeReportModal()" style="position: absolute; top: 20px; right: 20px; background: none; border: none; color: var(--text-muted); cursor: pointer; font-size: 1.5rem; font-weight: 700;">&times;</button>
       
-      <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-color); padding-bottom: 15px; margin-bottom: 20px;">
-        <h2 style="font-size: 1.4rem; font-weight: 800;"><span style="color: var(--color-cyan);">AI Threat Assessment</span> <span id="modal-report-id">rep-ID</span></h2>
-        <span class="result-badge" id="modal-risk-level" style="font-size: 0.8rem;">Level</span>
+      <!-- Modal Header -->
+      <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-color); padding-bottom: 15px; margin-bottom: 20px; flex-wrap: wrap; gap: 10px;">
+        <h2 style="font-size: 1.4rem; font-weight: 800; margin: 0;">
+          <span style="color: var(--color-cyan);">Threat Investigation Desk</span> 
+          <span id="modal-item-id" style="font-size: 0.95rem; color: var(--text-muted); margin-left: 8px;"></span>
+        </h2>
+        <div style="display: flex; gap: 10px; align-items: center;">
+          <span class="result-badge" id="modal-threat-level" style="font-size: 0.8rem;">Level</span>
+          <span class="result-badge" id="modal-recommendation-badge" style="font-size: 0.8rem;">Recommendation</span>
+        </div>
       </div>
 
-      <div style="display: grid; grid-template-columns: 1fr 2fr; gap: 25px;">
-        <!-- Left details column -->
-        <div>
-          <div class="risk-gauge-radial" style="width: 110px; height: 110px; margin: 0 auto 20px;">
-            <div style="font-size: 2.2rem; font-weight: 800; text-align: center; color: #fff;" id="modal-risk-score">0</div>
-            <div style="font-size: 0.75rem; text-align: center; text-transform: uppercase; color: var(--text-muted);">Risk Score</div>
-          </div>
+      <!-- Payload display -->
+      <div style="margin-bottom: 20px;">
+        <span style="color: var(--color-cyan); text-transform: uppercase; font-size: 0.75rem; font-weight: 700; display: block; margin-bottom: 5px;">Scan Payload Target</span>
+        <div style="background: rgba(0,0,0,0.3); padding: 12px; border-radius: 6px; font-family: monospace; font-size: 0.85rem; word-break: break-all; border: 1px solid var(--border-color);" id="modal-payload"></div>
+      </div>
 
-          <div style="background: rgba(0,0,0,0.2); padding: 15px; border-radius: 8px; border: 1px solid var(--border-color); font-size: 0.85rem;">
-            <div style="margin-bottom: 8px;"><strong>Google Safe Browsing:</strong> <span id="modal-gsb" style="float: right;">Safe</span></div>
-            <div style="margin-bottom: 8px;"><strong>VirusTotal Vendor Ratio:</strong> <span id="modal-vt" style="float: right;">0/0</span></div>
-            <div style="margin-bottom: 8px;"><strong>Community Reports count:</strong> <span id="modal-community" style="float: right;">0</span></div>
-            <div style="margin-bottom: 8px;"><strong>Confidence score:</strong> <span id="modal-confidence" style="float: right;">0%</span></div>
+      <!-- Main Columns Grid -->
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 25px;">
+        
+        <!-- LEFT COLUMN: VERIFIED EVIDENCE -->
+        <div style="border-right: 1px solid rgba(255,255,255,0.05); padding-right: 25px;">
+          <h3 style="font-size: 1rem; font-weight: 700; color: #fff; margin-bottom: 15px; border-bottom: 2px solid #22c55e; padding-bottom: 8px; display: flex; justify-content: space-between;">
+            <span>VERIFIED EVIDENCE</span>
+            <span style="font-size: 0.85rem; color: #22c55e;" id="verified-evidence-score">0/80</span>
+          </h3>
+          
+          <!-- Google Safe Browsing -->
+          <div style="background: rgba(255,255,255,0.02); border: 1px solid var(--border-color); border-radius: 8px; padding: 12px; margin-bottom: 15px;">
+            <div style="display: flex; justify-content: space-between; font-size: 0.85rem; font-weight: 700; color: var(--color-cyan); margin-bottom: 5px;">
+              <span>Google Safe Browsing</span>
+              <span id="gsb-score-frac">0/40</span>
+            </div>
+            <div style="font-size: 0.8rem; margin-bottom: 5px;">Status: <span id="gsb-status" style="font-weight: 700;">Safe</span></div>
+            <p style="font-size: 0.75rem; color: var(--text-muted); margin: 0; line-height: 1.4;" id="gsb-evidence"></p>
+          </div>
+          
+          <!-- VirusTotal -->
+          <div style="background: rgba(255,255,255,0.02); border: 1px solid var(--border-color); border-radius: 8px; padding: 12px; margin-bottom: 15px;">
+            <div style="display: flex; justify-content: space-between; font-size: 0.85rem; font-weight: 700; color: var(--color-cyan); margin-bottom: 5px;">
+              <span>VirusTotal Detections</span>
+              <span id="vt-score-frac">0/30</span>
+            </div>
+            <div style="font-size: 0.8rem; margin-bottom: 5px;">
+              Malicious: <span id="vt-malicious" style="font-weight: 700; color: var(--color-red);">0</span> | 
+              Suspicious: <span id="vt-suspicious" style="font-weight: 700; color: var(--color-warning);">0</span> | 
+              Total: <span id="vt-total">0</span>
+            </div>
+            <p style="font-size: 0.75rem; color: var(--text-muted); margin: 0; line-height: 1.4;" id="vt-evidence"></p>
+          </div>
+          
+          <!-- Structural Signals -->
+          <div style="background: rgba(255,255,255,0.02); border: 1px solid var(--border-color); border-radius: 8px; padding: 12px; margin-bottom: 15px;">
+            <div style="display: flex; justify-content: space-between; font-size: 0.85rem; font-weight: 700; color: var(--color-cyan); margin-bottom: 5px;">
+              <span>Structural Signals</span>
+              <span id="structural-score-frac">0/15</span>
+            </div>
+            <div style="font-size: 0.8rem; font-weight: 700; margin-bottom: 5px;">Identified Flags:</div>
+            <ul style="font-size: 0.75rem; color: var(--text-muted); margin: 0; padding-left: 15px; line-height: 1.4;" id="structural-signals-list">
+              <li>No structural flaws identified.</li>
+            </ul>
+          </div>
+          
+          <!-- Community Reports -->
+          <div style="background: rgba(255,255,255,0.02); border: 1px solid var(--border-color); border-radius: 8px; padding: 12px;">
+            <div style="display: flex; justify-content: space-between; font-size: 0.85rem; font-weight: 700; color: var(--color-cyan); margin-bottom: 5px;">
+              <span>Community Scam Reports</span>
+              <span id="community-score-frac">0/10</span>
+            </div>
+            <p style="font-size: 0.75rem; color: var(--text-muted); margin: 0; line-height: 1.4;" id="community-evidence">0 reports registered in the database.</p>
           </div>
         </div>
 
-        <!-- Right explanations column -->
+        <!-- RIGHT COLUMN: AI CONTEXT & OBSERVATIONS -->
         <div>
-          <h4 style="color: var(--color-cyan); text-transform: uppercase; font-size: 0.8rem; margin-bottom: 5px;">Target Scan Payload</h4>
-          <div style="background: rgba(0,0,0,0.3); padding: 10px 14px; border-radius: 6px; font-family: monospace; font-size: 0.85rem; word-break: break-all; margin-bottom: 15px;" id="modal-payload">Payload</div>
-
-          <h4 style="color: var(--color-cyan); text-transform: uppercase; font-size: 0.8rem; margin-bottom: 5px;">AI Security Assessment Explanation</h4>
-          <p id="modal-ai-explanation" style="font-size: 0.9rem; line-height: 1.5; color: var(--text-muted); margin-bottom: 15px;">Explanation</p>
-
-          <h4 style="color: var(--color-cyan); text-transform: uppercase; font-size: 0.8rem; margin-bottom: 5px;">Technical Indicators Identified</h4>
-          <div id="modal-indicators" style="display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 15px;">
-            <!-- Loaded dynamically -->
+          <h3 style="font-size: 1rem; font-weight: 700; color: #fff; margin-bottom: 15px; border-bottom: 2px solid var(--color-cyan); padding-bottom: 8px; display: flex; justify-content: space-between;">
+            <span>AI CONTEXT & OBSERVATIONS</span>
+            <span style="font-size: 0.85rem; color: var(--color-cyan);" id="ai-context-score">0/15</span>
+          </h3>
+          
+          <!-- AI Risk & Confidence -->
+          <div style="background: rgba(255,255,255,0.02); border: 1px solid var(--border-color); border-radius: 8px; padding: 12px; margin-bottom: 15px;">
+            <div style="display: flex; justify-content: space-between; font-size: 0.85rem; font-weight: 700; color: var(--color-cyan); margin-bottom: 5px;">
+              <span>AI Classification metrics</span>
+              <span id="ai-score-frac">0/15</span>
+            </div>
+            <div style="font-size: 0.8rem; margin-bottom: 5px;">
+              AI Risk Score: <span id="ai-risk-score" style="font-weight: 700;">0/100</span> | 
+              AI Confidence: <span id="ai-confidence" style="font-weight: 700;">0%</span>
+            </div>
+            <div style="font-size: 0.8rem; margin-bottom: 5px;">AI Threat Category: <span id="ai-category" style="font-weight: 700; color: var(--color-warning);">Safe</span></div>
+          </div>
+          
+          <!-- AI Reasoning -->
+          <div style="background: rgba(255,255,255,0.02); border: 1px solid var(--border-color); border-radius: 8px; padding: 12px; margin-bottom: 15px;">
+            <span style="font-size: 0.8rem; font-weight: 700; color: var(--color-cyan); display: block; margin-bottom: 5px;">AI Reasoning / Contextual Analysis</span>
+            <p style="font-size: 0.75rem; color: var(--text-muted); margin: 0; line-height: 1.5; font-style: italic;" id="ai-reasoning"></p>
           </div>
 
-          <div style="background: rgba(245,158,11,0.05); border: 1px solid rgba(245,158,11,0.2); padding: 15px; border-radius: 8px;">
-            <strong style="color: var(--color-warning); text-transform: uppercase; font-size: 0.8rem; display: block; margin-bottom: 4px;">Recommended Action:</strong>
-            <span style="font-weight: 700; font-size: 1rem; color: #fff;" id="modal-recommendation">Action</span>
+          <!-- AI Observations Warnings -->
+          <div style="background: rgba(245,158,11,0.04); border: 1px solid rgba(245,158,11,0.2); border-radius: 8px; padding: 12px; margin-bottom: 15px;">
+            <span style="font-size: 0.8rem; font-weight: 700; color: var(--color-warning); display: block; margin-bottom: 5px;">Unverified AI Observations</span>
+            <p style="font-size: 0.7rem; color: var(--text-muted); margin: 0 0 8px 0; line-height: 1.4;">
+              The following signals were highlighted by AI analysis, but have NOT been independently verified:
+            </p>
+            <div id="ai-observations-list" style="display: flex; flex-wrap: wrap; gap: 6px;">
+              <span class="stat-badge badge-police" style="font-size: 0.7rem;">None</span>
+            </div>
           </div>
+
+          <!-- Threat & Indicators Summary -->
+          <div style="background: rgba(255,255,255,0.02); border: 1px solid var(--border-color); border-radius: 8px; padding: 12px;">
+            <span style="font-size: 0.8rem; font-weight: 700; color: #fff; display: block; margin-bottom: 8px;">VERIFIED THREAT IDENTIFIERS</span>
+            
+            <div style="margin-bottom: 8px;">
+              <span style="font-size: 0.75rem; color: var(--text-muted); display: block; margin-bottom: 4px;">Threats Detected</span>
+              <div id="modal-threats-detected" style="display: flex; flex-wrap: wrap; gap: 6px;"></div>
+            </div>
+            
+            <div>
+              <span style="font-size: 0.75rem; color: var(--text-muted); display: block; margin-bottom: 4px;">Technical Indicators</span>
+              <div id="modal-technical-indicators" style="display: flex; flex-wrap: wrap; gap: 6px;"></div>
+            </div>
+          </div>
+
         </div>
+
       </div>
     </div>
   </div>
@@ -660,6 +808,8 @@
 
   <!-- Command Center Script -->
   <script>
+    const API_BASE_URL = 'http://localhost:5000';
+
     // Constants and variables
     let map = null;
     let mapMarkers = [];
@@ -699,7 +849,7 @@
         if (!token) {
           // Perform silent auto-login to bypass manual login friction
           try {
-            const authRes = await fetch('/auth/login', {
+            const authRes = await fetch(`${API_BASE_URL}/auth/login`, {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({ email: 'admin@qrshield.ai', password: 'admin123' })
@@ -726,6 +876,9 @@
       fetchBlockedLists();
       fetchUsersList();
 
+      // Fetch scans immediately for recent dangerous scans list
+      await silentSyncStats();
+
       // Setup live Firestore/Polling listeners
       startRealTimeSync();
 
@@ -735,15 +888,30 @@
       }
     });
 
+    function getInitials(name) {
+      if (!name) return 'U';
+      const parts = name.trim().split(/\s+/);
+      if (parts.length >= 2) {
+        return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+      }
+      return name.slice(0, 2).toUpperCase();
+    }
+
     function loadAdminIdentity() {
       const user = JSON.parse(localStorage.getItem('qr_shield_user') || '{}');
       const card = document.getElementById('admin-identity-card');
       if (card && user.email) {
+        const displayName = user.name || user.email.split('@')[0];
+        const displayRole = user.role === 'Police' ? 'Police Officer' : user.role;
+        const initials = getInitials(displayName);
+        
         card.innerHTML = `
-          <img src="${user.photo || 'assets/img/avatar.png'}" class="user-avatar-mini" alt="User profile" style="margin-right: 0;">
+          <div class="user-avatar-mini-initials" style="width: 32px; height: 32px; border-radius: 50%; background: var(--color-cyan); color: #000; font-weight: 800; font-size: 0.85rem; display: flex; align-items: center; justify-content: center; text-transform: uppercase;">
+            ${initials}
+          </div>
           <div>
-            <div style="font-weight: 700; font-size: 0.85rem; color: #fff;">${user.name}</div>
-            <div style="font-size: 0.75rem; color: var(--text-muted); font-weight: 600;">${user.role} Agent</div>
+            <div style="font-weight: 700; font-size: 0.85rem; color: #fff;">${displayName}</div>
+            <div style="font-size: 0.75rem; color: var(--text-muted); font-weight: 600;">${displayRole}</div>
           </div>
         `;
       }
@@ -771,38 +939,43 @@
     async function silentSyncStats() {
       const token = localStorage.getItem('qr_shield_token');
       try {
-        const res = await fetch('/admin/scans', {
+        const res = await fetch(`${API_BASE_URL}/admin/scans`, {
           headers: { 'Authorization': `Bearer ${token}` }
         });
         const data = await res.json();
         if (res.ok && data.success) {
           const freshScans = data.scans;
-          if (freshScans.length > allScans.length) {
-            // New scan identified!
+          
+          if (allScans.length > 0 && freshScans.length > allScans.length) {
             const newCount = freshScans.length - allScans.length;
             const newItems = freshScans.slice(0, newCount);
             
-            // Loop through new scans
             newItems.forEach(item => {
-              // Append to Live Feed
               logThreatFeed(item);
-              
-              // If Risk is critical (> 90), trigger visual overlay alerts
               if (item.riskScore >= 90) {
                 triggerCriticalOverlayAlert(item);
               }
             });
             
-            // Reload statistics
-            allScans = freshScans;
             fetchDashboardStats();
             fetchThreatIntelligence();
             fetchActivityLogs();
             updateMapMarkers();
           }
+          
+          allScans = freshScans;
+          
+          // Render Recent Dangerous Scans table
+          renderRecentDangerousScans();
+          
+          updateLastUpdatedTimestamp();
+          showSyncErrorState(false);
+        } else {
+          showSyncErrorState(true);
         }
       } catch (err) {
         console.error('Silent stats sync failed:', err.message);
+        showSyncErrorState(true);
       }
     }
 
@@ -861,7 +1034,7 @@
     async function fetchDashboardStats() {
       const token = localStorage.getItem('qr_shield_token');
       try {
-        const res = await fetch('/admin/dashboard', {
+        const res = await fetch(`${API_BASE_URL}/admin/dashboard`, {
           headers: { 'Authorization': `Bearer ${token}` }
         });
         const data = await res.json();
@@ -877,50 +1050,70 @@
       const container = document.getElementById('soc-stats-container');
       if (!container) return;
       
+      // Update Critical CTA visibility
+      const ctaBox = document.getElementById('critical-cta-box');
+      const noCtaBox = document.getElementById('no-critical-cta-box');
+      if (stats.criticalThreats > 0) {
+        if (ctaBox) ctaBox.style.display = 'block';
+        if (noCtaBox) noCtaBox.style.display = 'none';
+      } else {
+        if (ctaBox) ctaBox.style.display = 'none';
+        if (noCtaBox) noCtaBox.style.display = 'block';
+      }
+
       container.innerHTML = `
-        <div class="soc-stat-node">
-          <div class="intel-title">Today's Scans</div>
-          <div class="soc-stat-val cyan">${stats.scansToday}</div>
+        <!-- TOP ROW -->
+        <div style="margin-bottom: 20px;">
+          <h4 style="font-size: 0.8rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 10px;">Operational Volume & Threats</h4>
+          <div class="soc-stats-matrix" style="grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));">
+            <div class="soc-stat-node">
+              <div class="intel-title">Today's Scans</div>
+              <div class="soc-stat-val cyan">${stats.scansToday}</div>
+            </div>
+            <div class="soc-stat-node">
+              <div class="intel-title">Safe Scans</div>
+              <div class="soc-stat-val green">${stats.safeScans}</div>
+            </div>
+            <div class="soc-stat-node">
+              <div class="intel-title">Dangerous / High Risk</div>
+              <div class="soc-stat-val orange" style="color: var(--color-warning);">${stats.highRisk}</div>
+            </div>
+            <div class="soc-stat-node" style="border-color: rgba(239, 68, 68, 0.3);">
+              <div class="intel-title" style="color: var(--color-red);">Critical Threats</div>
+              <div class="soc-stat-val red">${stats.criticalThreats}</div>
+            </div>
+            <div class="soc-stat-node">
+              <div class="intel-title">Pending Reports</div>
+              <div class="soc-stat-val orange">${stats.pendingReports}</div>
+            </div>
+          </div>
         </div>
-        <div class="soc-stat-node">
-          <div class="intel-title">Total Safe Scans</div>
-          <div class="soc-stat-val green">${stats.safeScans}</div>
-        </div>
-        <div class="soc-stat-node">
-          <div class="intel-title">Low Risk</div>
-          <div class="soc-stat-val cyan">${stats.lowRisk}</div>
-        </div>
-        <div class="soc-stat-node">
-          <div class="intel-title">Medium Risk</div>
-          <div class="soc-stat-val orange">${stats.mediumRisk}</div>
-        </div>
-        <div class="soc-stat-node">
-          <div class="intel-title">High Risk</div>
-          <div class="soc-stat-val orange" style="color: var(--color-warning);">${stats.highRisk}</div>
-        </div>
-        <div class="soc-stat-node" style="border-color: rgba(239, 68, 68, 0.3);">
-          <div class="intel-title" style="color: var(--color-red);">Critical Threats</div>
-          <div class="soc-stat-val red">${stats.criticalThreats}</div>
-        </div>
-        <div class="soc-stat-node">
-          <div class="intel-title">Today's Reports</div>
-          <div class="soc-stat-val orange">${stats.reportsToday}</div>
-        </div>
-        <div class="soc-stat-node">
-          <div class="intel-title">Pending Reports</div>
-          <div class="soc-stat-val orange">${stats.pendingReports}</div>
-        </div>
-        <div class="soc-stat-node">
-          <div class="intel-title">Blocked Domains</div>
-          <div class="soc-stat-val red">${stats.blockedDomainsCount}</div>
-        </div>
-        <div class="soc-stat-node">
-          <div class="intel-title">Blocked VPAs</div>
-          <div class="soc-stat-val red">${stats.blockedUpiCount}</div>
-        </div>
-        <div class="soc-stat-node">
-          <div class="intel-title">Active Users</div>
-          <div class="soc-stat-val green">${stats.activeUsers}</div>
+
+        <!-- SECONDARY ROW -->
+        <div style="margin-top: 15px; margin-bottom: 25px;">
+          <h4 style="font-size: 0.8rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 10px;">System Capacity & Health</h4>
+          <div class="soc-stats-matrix" style="grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));">
+            <div class="soc-stat-node">
+              <div class="intel-title">Active Users</div>
+              <div class="soc-stat-val green">${stats.activeUsers}</div>
+            </div>
+            <div class="soc-stat-node">
+              <div class="intel-title">Blocked Domains</div>
+              <div class="soc-stat-val red">${stats.blockedDomainsCount}</div>
+            </div>
+            <div class="soc-stat-node">
+              <div class="intel-title">Blocked VPAs</div>
+              <div class="soc-stat-val red">${stats.blockedUpiCount}</div>
+            </div>
+            <div class="soc-stat-node">
+              <div class="intel-title">Average Risk Score</div>
+              <div class="soc-stat-val cyan">${stats.avgRiskScore}/100</div>
+            </div>
+            <div class="soc-stat-node">
+              <div class="intel-title">Average Scan Time</div>
+              <div class="soc-stat-val green" style="color: #22c55e;">${stats.avgScanTimeMs}ms</div>
+            </div>
+          </div>
         </div>
       `;
     }
@@ -929,7 +1122,7 @@
     async function fetchThreatIntelligence() {
       const token = localStorage.getItem('qr_shield_token');
       try {
-        const res = await fetch('/admin/stats', {
+        const res = await fetch(`${API_BASE_URL}/admin/stats`, {
           headers: { 'Authorization': `Bearer ${token}` }
         });
         const data = await res.json();
@@ -945,43 +1138,305 @@
       const container = document.getElementById('threat-intel-container');
       if (!container) return;
       
+      const regionVal = intel.mostDangerousCity && intel.mostDangerousCity !== 'Insufficient Data'
+        ? `${intel.mostDangerousCity}${intel.mostDangerousState ? ', ' + intel.mostDangerousState : ''}`
+        : 'Insufficient Data';
+
       container.innerHTML = `
         <div class="intel-node">
           <div class="intel-title">Top Scam Category</div>
-          <div class="intel-val" style="color: var(--color-warning);">${intel.topScamCategory}</div>
+          <div class="intel-val" style="color: var(--color-warning);">${intel.topScamCategory || 'No Data Yet'}</div>
+        </div>
+        <div class="intel-node">
+          <div class="intel-title">Top Detected Malicious Domain</div>
+          <div class="intel-val" style="color: var(--color-red); font-weight: 700; word-break: break-all;">${intel.topDetectedDomain || 'No Data Yet'}</div>
         </div>
         <div class="intel-node">
           <div class="intel-title">Most Impersonated Brand</div>
-          <div class="intel-val" style="color: var(--color-cyan);">${intel.topTargetedBrand}</div>
+          <div class="intel-val" style="color: var(--color-cyan);">${intel.topTargetedBrand || 'No Data Yet'}</div>
         </div>
         <div class="intel-node">
-          <div class="intel-title">Most Blocked Domain</div>
-          <div class="intel-val" style="color: var(--color-red);">${intel.mostDangerousDomain}</div>
-        </div>
-        <div class="intel-node">
-          <div class="intel-title">Most Blocked Merchant</div>
-          <div class="intel-val" style="color: var(--color-red);">${intel.mostReportedMerchant}</div>
+          <div class="intel-title">Top Threat Detection Region</div>
+          <div class="intel-val">${regionVal}</div>
         </div>
         <div class="intel-node">
           <div class="intel-title">Most Reported VPA</div>
-          <div class="intel-val" style="color: var(--color-warning);">${intel.mostDangerousUpi}</div>
-        </div>
-        <div class="intel-node">
-          <div class="intel-title">Most Reported Region</div>
-          <div class="intel-val">${intel.mostDangerousCity}, ${intel.mostDangerousState}</div>
-        </div>
-        <div class="intel-node">
-          <div class="intel-title">Fastest Growing Scam Vector</div>
-          <div class="intel-val" style="color: var(--color-red);">${intel.fastestGrowingScam}</div>
+          <div class="intel-val" style="color: var(--color-warning); word-break: break-all;">${intel.mostDangerousUpi || 'No Data Yet'}</div>
         </div>
       `;
+    }
+
+    function renderRecentDangerousScans() {
+      const tbody = document.getElementById('dangerous-scans-body');
+      if (!tbody) return;
+      tbody.innerHTML = '';
+      
+      const dangerous = allScans.filter(s => s.riskScore > 60);
+      
+      if (dangerous.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="7" style="text-align: center; color: var(--text-muted);">No dangerous threats detected yet.</td></tr>';
+        document.getElementById('view-all-threats-btn-container').style.display = 'none';
+        return;
+      }
+      
+      dangerous.sort((a, b) => {
+        const aCrit = a.riskScore > 80 ? 1 : 0;
+        const bCrit = b.riskScore > 80 ? 1 : 0;
+        if (aCrit !== bCrit) {
+          return bCrit - aCrit;
+        }
+        return new Date(b.timestamp) - new Date(a.timestamp);
+      });
+      
+      const displayScans = dangerous.slice(0, 5);
+      
+      if (dangerous.length > 5) {
+        document.getElementById('view-all-threats-btn-container').style.display = 'block';
+      } else {
+        document.getElementById('view-all-threats-btn-container').style.display = 'none';
+      }
+      
+      displayScans.forEach(s => {
+        const time = new Date(s.timestamp).toLocaleString();
+        const scoreColor = s.riskScore > 80 ? 'color: var(--color-red); font-weight: 800;' : 'color: var(--color-warning);';
+        const level = s.riskScore > 80 ? 'Critical' : 'High Risk';
+        const payloadText = s.payload.length > 30 ? s.payload.slice(0, 30) + '...' : s.payload;
+        
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td><span style="font-family: monospace; font-size: 0.8rem; color: var(--color-cyan);">${time}</span></td>
+          <td>${s.city || 'Unknown'}</td>
+          <td><span class="stat-badge badge-police">${s.qrType}</span></td>
+          <td>${s.analysis?.threatCategory || 'Phishing'}</td>
+          <td style="${scoreColor}">${s.riskScore}/100</td>
+          <td><code style="word-break: break-all;" title="${s.payload}">${payloadText}</code></td>
+          <td>
+            <button onclick='openInvestigationModal(${JSON.stringify(s).replace(/'/g, "&#39;")})' class="btn btn-primary" style="padding: 4px 8px; font-size: 0.75rem; height: 26px;">
+              Investigate
+            </button>
+          </td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    function viewAllThreats() {
+      const tabReports = document.querySelector('[data-target="tab-reports"]');
+      if (tabReports) {
+        tabReports.click();
+      }
+      const filterRisk = document.getElementById('filter-risk');
+      if (filterRisk) {
+        filterRisk.value = '';
+        applyFilters();
+      }
+      const table = document.getElementById('incidents-reports-table');
+      if (table) {
+        table.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+    }
+
+    function investigateCriticalIncidents() {
+      const tabReports = document.querySelector('[data-target="tab-reports"]');
+      if (tabReports) {
+        tabReports.click();
+      }
+      const filterRisk = document.getElementById('filter-risk');
+      if (filterRisk) {
+        filterRisk.value = 'Critical';
+        applyFilters();
+      }
+      const table = document.getElementById('incidents-reports-table');
+      if (table) {
+        table.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+    }
+
+    function updateLastUpdatedTimestamp() {
+      const now = new Date();
+      const timeStr = now.toTimeString().split(' ')[0];
+      const indicator = document.getElementById('hud-last-updated');
+      if (indicator) {
+        indicator.textContent = `Last updated: ${timeStr}`;
+      }
+    }
+
+    function showSyncErrorState(hasError) {
+      const indicator = document.getElementById('live-indicator');
+      if (indicator) {
+        if (hasError) {
+          indicator.textContent = 'MONITOR OFFLINE ⚠';
+          indicator.style.color = 'var(--color-red)';
+        } else {
+          indicator.textContent = 'LIVE MONITORING ●';
+          indicator.style.color = '#22c55e';
+        }
+      }
+    }
+
+    function openInvestigationModal(item) {
+      const modal = document.getElementById('incident-report-modal');
+      if (!modal) return;
+      
+      document.getElementById('modal-item-id').textContent = item.reportId ? `Report ID: ${item.reportId}` : `Scan ID: ${item.scanId}`;
+      document.getElementById('modal-payload').textContent = item.payload;
+      
+      const score = item.riskScore;
+      let level = 'Safe';
+      let levelBadge = 'badge-safe';
+      if (score >= 81) { level = 'Critical'; levelBadge = 'badge-dangerous'; }
+      else if (score >= 61) { level = 'High Risk'; levelBadge = 'badge-suspicious'; }
+      else if (score >= 41) { level = 'Medium Risk'; levelBadge = 'badge-medium'; }
+      else if (score >= 21) { level = 'Low Risk'; levelBadge = 'badge-low'; }
+      
+      const levelEl = document.getElementById('modal-threat-level');
+      levelEl.textContent = `${level} (${score}/100)`;
+      levelEl.className = `result-badge ${levelBadge}`;
+      
+      let recommendation = 'Proceed';
+      let recBadge = 'badge-safe';
+      if (score >= 61) { recommendation = 'Block Target'; recBadge = 'badge-dangerous'; }
+      else if (score >= 41) { recommendation = 'Verify Manually'; recBadge = 'badge-medium'; }
+      else if (score >= 21) { recommendation = 'Proceed Carefully'; recBadge = 'badge-low'; }
+      
+      const recEl = document.getElementById('modal-recommendation-badge');
+      recEl.textContent = recommendation;
+      recEl.className = `result-badge ${recBadge}`;
+      
+      const hasAnalysis = item.analysis && item.analysis.riskBreakdown;
+      const breakdown = hasAnalysis ? item.analysis.riskBreakdown : null;
+      
+      // GSB
+      const gsb = breakdown?.googleSafeBrowsing;
+      document.getElementById('gsb-score-frac').textContent = gsb ? `${gsb.score}/${gsb.maxScore}` : '0/40';
+      document.getElementById('gsb-status').textContent = gsb ? gsb.status : (item.analysis?.googleSafeBrowsing || 'Safe');
+      document.getElementById('gsb-status').style.color = (gsb?.status === 'Safe' || item.analysis?.googleSafeBrowsing === 'Safe') ? '#22c55e' : '#ef4444';
+      document.getElementById('gsb-evidence').textContent = gsb ? gsb.evidence : 'No GSB threats identified.';
+      
+      // VT
+      const vt = breakdown?.virusTotal;
+      document.getElementById('vt-score-frac').textContent = vt ? `${vt.score}/${vt.maxScore}` : '0/30';
+      document.getElementById('vt-malicious').textContent = vt ? (vt.malicious || 0) : (item.analysis?.virusTotal?.malicious || 0);
+      document.getElementById('vt-suspicious').textContent = vt ? (vt.suspicious || 0) : (item.analysis?.virusTotal?.suspicious || 0);
+      document.getElementById('vt-total').textContent = vt ? (vt.totalEvaluated || 0) : (item.analysis?.virusTotal?.ratio?.split('/')[1] || 0);
+      document.getElementById('vt-evidence').textContent = vt ? vt.evidence : 'No VirusTotal threat signatures found.';
+      
+      // Structural Signals
+      const struct = breakdown?.structuralSignals;
+      document.getElementById('structural-score-frac').textContent = struct ? `${struct.score}/${struct.maxScore}` : '0/15';
+      const sigList = document.getElementById('structural-signals-list');
+      sigList.innerHTML = '';
+      if (struct?.signals && struct.signals.length > 0) {
+        struct.signals.forEach(sig => {
+          const li = document.createElement('li');
+          li.textContent = sig;
+          sigList.appendChild(li);
+        });
+      } else {
+        const li = document.createElement('li');
+        li.textContent = 'Safe structural signals verified.';
+        sigList.appendChild(li);
+      }
+      
+      // Community Reports
+      const comm = breakdown?.communityReports;
+      document.getElementById('community-score-frac').textContent = comm ? `${comm.score}/${comm.maxScore}` : '0/10';
+      const commCount = comm ? comm.reportCount : (item.analysis?.communityReports || 0);
+      document.getElementById('community-evidence').textContent = `${commCount} reports registered in the database.`;
+      
+      const gsbScore = gsb?.score || 0;
+      const vtScore = vt?.score || 0;
+      const structScore = struct?.score || 0;
+      const commScore = comm?.score || 0;
+      document.getElementById('verified-evidence-score').textContent = `${gsbScore + vtScore + structScore + commScore}/95`;
+      
+      // AI Context
+      const ai = breakdown?.aiContext;
+      document.getElementById('ai-context-score').textContent = ai ? `${ai.score}/${ai.maxScore}` : '0/15';
+      document.getElementById('ai-score-frac').textContent = ai ? `${ai.score}/${ai.maxScore}` : '0/15';
+      
+      const aiRisk = ai ? ai.aiRiskScore : (item.analysis?.confidence ? item.riskScore : 0);
+      const aiConf = ai ? ai.confidence : (item.analysis?.confidence || 0);
+      const aiCat = ai ? ai.category : (item.analysis?.threatCategory || 'Safe');
+      
+      document.getElementById('ai-risk-score').textContent = `${aiRisk}/100`;
+      document.getElementById('ai-confidence').textContent = `${aiConf}%`;
+      document.getElementById('ai-category').textContent = aiCat;
+      document.getElementById('ai-reasoning').textContent = item.analysis?.aiReasoning || item.analysis?.reasoning || 'No AI reasoning details available.';
+      
+      // Unverified AI Observations
+      const obsContainer = document.getElementById('ai-observations-list');
+      obsContainer.innerHTML = '';
+      const aiObs = item.analysis?.aiObservations;
+      const obsThreats = aiObs?.threatsDetected || [];
+      const obsInds = aiObs?.technicalIndicators || [];
+      const allObs = [...obsThreats, ...obsInds];
+      
+      if (allObs.length > 0) {
+        allObs.forEach(obs => {
+          const span = document.createElement('span');
+          span.className = 'stat-badge badge-low';
+          span.style.fontSize = '0.7rem';
+          span.style.background = 'rgba(245, 158, 11, 0.1)';
+          span.style.borderColor = 'rgba(245, 158, 11, 0.3)';
+          span.style.color = '#f59e0b';
+          span.textContent = obs;
+          obsContainer.appendChild(span);
+        });
+      } else {
+        const span = document.createElement('span');
+        span.className = 'stat-badge badge-safe';
+        span.style.fontSize = '0.7rem';
+        span.textContent = 'No unverified observations highlighted.';
+        obsContainer.appendChild(span);
+      }
+      
+      const threatsContainer = document.getElementById('modal-threats-detected');
+      threatsContainer.innerHTML = '';
+      const threats = item.analysis?.threatsDetected || [];
+      if (threats.length > 0) {
+        threats.forEach(t => {
+          const span = document.createElement('span');
+          span.className = 'stat-badge badge-dangerous';
+          span.style.fontSize = '0.7rem';
+          span.textContent = t;
+          threatsContainer.appendChild(span);
+        });
+      } else {
+        const span = document.createElement('span');
+        span.className = 'stat-badge badge-safe';
+        span.style.fontSize = '0.7rem';
+        span.textContent = 'None';
+        threatsContainer.appendChild(span);
+      }
+      
+      const indsContainer = document.getElementById('modal-technical-indicators');
+      indsContainer.innerHTML = '';
+      const inds = item.analysis?.technicalIndicators || [];
+      if (inds.length > 0) {
+        inds.forEach(ind => {
+          const span = document.createElement('span');
+          span.className = 'stat-badge badge-police';
+          span.style.fontSize = '0.7rem';
+          span.textContent = ind;
+          indsContainer.appendChild(span);
+        });
+      } else {
+        const span = document.createElement('span');
+        span.className = 'stat-badge badge-safe';
+        span.style.fontSize = '0.7rem';
+        span.textContent = 'Safe structural format';
+        indsContainer.appendChild(span);
+      }
+      
+      modal.classList.add('active');
     }
 
     // Update Geolocation Markers
     async function updateMapMarkers() {
       const token = localStorage.getItem('qr_shield_token');
       try {
-        const res = await fetch('/admin/map', {
+        const res = await fetch(`${API_BASE_URL}/admin/map`, {
           headers: { 'Authorization': `Bearer ${token}` }
         });
         const data = await res.json();
@@ -1022,7 +1477,7 @@
     async function fetchAnalyticsData() {
       const token = localStorage.getItem('qr_shield_token');
       try {
-        const res = await fetch('/admin/analytics', {
+        const res = await fetch(`${API_BASE_URL}/admin/analytics`, {
           headers: { 'Authorization': `Bearer ${token}` }
         });
         const data = await res.json();
@@ -1166,7 +1621,7 @@
     async function fetchReportsList() {
       const token = localStorage.getItem('qr_shield_token');
       try {
-        const res = await fetch('/admin/reports', {
+        const res = await fetch(`${API_BASE_URL}/admin/reports`, {
           headers: { 'Authorization': `Bearer ${token}` }
         });
         const data = await res.json();
@@ -1190,7 +1645,6 @@
       }
 
       reports.forEach(r => {
-        const date = new Date(r.createdAt || r.timestamp).toLocaleDateString();
         const scoreColor = r.riskScore >= 75 ? 'color: var(--color-red); font-weight: 800;' : (r.riskScore >= 30 ? 'color: var(--color-warning);' : 'color: #22c55e;');
         
         let statusBadgeClass = 'badge-safe';
@@ -1200,19 +1654,22 @@
 
         const tr = document.createElement('tr');
         tr.style.cursor = 'pointer';
-        // Open details modal on click
         tr.addEventListener('click', (e) => {
           if (e.target.tagName !== 'BUTTON' && e.target.tagName !== 'SELECT') {
-            openReportDetail(r);
+            openInvestigationModal(r);
           }
         });
+
+        const locationText = (r.city && r.city !== 'Unknown' && r.state && r.state !== 'Unknown')
+          ? `${r.city}, ${r.state}`
+          : (r.city && r.city !== 'Unknown' ? r.city : (r.state && r.state !== 'Unknown' ? r.state : 'Unknown'));
 
         tr.innerHTML = `
           <td><strong>${r.reportId || 'N/A'}</strong></td>
           <td>${r.userId === 'mock-user-uid' ? 'Ayush Kumar' : 'Anonymous'}</td>
           <td style="${scoreColor}">${r.riskScore}/100</td>
           <td><span class="stat-badge badge-police">${r.reason || 'Fraud'}</span></td>
-          <td>${r.city || 'Mumbai'}, ${r.state || 'Maharashtra'}</td>
+          <td>${locationText}</td>
           <td style="max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;"><code>${r.payload}</code></td>
           <td><span class="stat-badge ${statusBadgeClass}">${r.status}</span></td>
           <td>
@@ -1236,7 +1693,7 @@
       if (!status) return;
       const token = localStorage.getItem('qr_shield_token');
       try {
-        const res = await fetch(`/admin/report/${reportId}`, {
+        const res = await fetch(`${API_BASE_URL}/admin/report/${reportId}`, {
           method: 'PUT',
           headers: {
             'Content-Type': 'application/json',
@@ -1260,7 +1717,7 @@
       if (!confirm('Are you sure you want to permanently delete/purge this threat report from database?')) return;
       const token = localStorage.getItem('qr_shield_token');
       try {
-        const res = await fetch(`/admin/report/${reportId}`, {
+        const res = await fetch(`${API_BASE_URL}/admin/report/${reportId}`, {
           method: 'DELETE',
           headers: { 'Authorization': `Bearer ${token}` }
         });
@@ -1273,49 +1730,6 @@
       } catch (err) {
         showToast('Failed to purge report.', 'error');
       }
-    }
-
-    // Open Report Details Modal
-    function openReportDetail(report) {
-      const modal = document.getElementById('incident-report-modal');
-      if (!modal) return;
-      
-      document.getElementById('modal-report-id').textContent = report.reportId || 'N/A';
-      document.getElementById('modal-risk-score').textContent = report.riskScore;
-      
-      const rLevel = report.riskScore >= 75 ? 'Critical' : (report.riskScore >= 40 ? 'Medium' : 'Safe');
-      const badge = document.getElementById('modal-risk-level');
-      badge.textContent = rLevel;
-      badge.className = 'result-badge';
-      if (rLevel === 'Safe') badge.classList.add('badge-safe');
-      if (rLevel === 'Medium') badge.classList.add('badge-medium');
-      if (rLevel === 'Critical') badge.classList.add('badge-dangerous');
-
-      document.getElementById('modal-payload').textContent = report.payload;
-      
-      // AI Assess indicators
-      const hasAnalysis = report.analysis;
-      document.getElementById('modal-gsb').textContent = hasAnalysis ? (report.analysis.googleSafeBrowsing || 'Safe') : 'Safe';
-      document.getElementById('modal-vt').textContent = hasAnalysis ? (report.analysis.virusTotal?.ratio || '0/72') : '0/72';
-      document.getElementById('modal-community').textContent = hasAnalysis ? (report.analysis.communityReports || '1') : '1';
-      document.getElementById('modal-confidence').textContent = hasAnalysis ? `${report.analysis.confidence || 85}%` : '85%';
-      
-      document.getElementById('modal-ai-explanation').textContent = report.description || (hasAnalysis ? report.analysis.reasoning : 'Heuristics triggered. Phishing signature match.');
-      document.getElementById('modal-recommendation').textContent = hasAnalysis ? report.analysis.recommendation : 'Verify VPA registry.';
-
-      // Render technical indicators array
-      const indContainer = document.getElementById('modal-indicators');
-      indContainer.innerHTML = '';
-      const indicators = hasAnalysis ? report.analysis.technicalIndicators : ['UPI VPA Payload', 'Manual Report Flag'];
-      indicators.forEach(ind => {
-        const span = document.createElement('span');
-        span.className = 'stat-badge badge-police';
-        span.style.fontSize = '0.75rem';
-        span.textContent = ind;
-        indContainer.appendChild(span);
-      });
-
-      modal.classList.add('active');
     }
 
     function closeReportModal() {
@@ -1363,7 +1777,7 @@
     async function fetchActivityLogs() {
       const token = localStorage.getItem('qr_shield_token');
       try {
-        const res = await fetch('/admin/activity', {
+        const res = await fetch(`${API_BASE_URL}/admin/activity`, {
           headers: { 'Authorization': `Bearer ${token}` }
         });
         const data = await res.json();
@@ -1397,7 +1811,7 @@
     async function fetchBlockedLists() {
       const token = localStorage.getItem('qr_shield_token');
       try {
-        const res = await fetch('/admin/dashboard', {
+        const res = await fetch(`${API_BASE_URL}/admin/dashboard`, {
           headers: { 'Authorization': `Bearer ${token}` }
         });
         const data = await res.json();
@@ -1441,7 +1855,7 @@
       const value = input.value.trim();
 
       try {
-        const res = await fetch('/admin/block', {
+        const res = await fetch(`${API_BASE_URL}/admin/block`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -1468,7 +1882,7 @@
     async function fetchUsersList() {
       const token = localStorage.getItem('qr_shield_token');
       try {
-        const res = await fetch('/admin/users', {
+        const res = await fetch(`${API_BASE_URL}/admin/users`, {
           headers: { 'Authorization': `Bearer ${token}` }
         });
         const data = await res.json();
@@ -1514,7 +1928,7 @@
       if (!role) return;
       const token = localStorage.getItem('qr_shield_token');
       try {
-        const res = await fetch(`/admin/user/${uid}/role`, {
+        const res = await fetch(`${API_BASE_URL}/admin/user/${uid}/role`, {
           method: 'PUT',
           headers: {
             'Content-Type': 'application/json',

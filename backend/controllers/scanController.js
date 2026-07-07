@@ -4,6 +4,7 @@ const googleSafeBrowsing = require('../services/googleSafeBrowsing');
 const virusTotal = require('../services/virusTotal');
 const openRouter = require('../services/openRouter');
 const riskEngine = require('../services/riskEngine');
+const { getThreatLevel, getRiskStatus } = require('../services/severityPolicy');
 
 // In-Memory API Cache to protect key quotas (TTL: 5 minutes)
 const apiCache = {};
@@ -185,7 +186,7 @@ exports.createScan = async (req, res, next) => {
       payload,
       qrType,
       riskScore: analysis.riskScore,
-      status: analysis.threatLevel === 'Safe' ? 'Safe' : (analysis.threatLevel === 'Low Risk' || analysis.threatLevel === 'Medium Risk' ? 'Suspicious' : 'Dangerous'),
+      status: getRiskStatus(analysis.riskScore),
       city: finalCity,
       latitude: finalLat,
       longitude: finalLng,
@@ -200,12 +201,12 @@ exports.createScan = async (req, res, next) => {
       if (scanRecord.status === 'Safe') sandboxDb.incrementAnalytics(dateStr, 'safe');
       if (scanRecord.status === 'Dangerous') sandboxDb.incrementAnalytics(dateStr, 'dangerous');
       
-      if (analysis.riskScore >= 75) {
+      const threatLvl = getThreatLevel(analysis.riskScore);
+      if (threatLvl === 'High Risk') {
         sandboxDb.incrementAnalytics(dateStr, 'highRisk');
-      } else if (analysis.riskScore >= 30) {
+      } else if (threatLvl === 'Medium Risk') {
         sandboxDb.incrementAnalytics(dateStr, 'mediumRisk');
-      }
-      if (analysis.riskScore >= 90) {
+      } else if (threatLvl === 'Critical') {
         sandboxDb.incrementAnalytics(dateStr, 'criticalRisk');
       }
 
@@ -240,9 +241,11 @@ exports.createScan = async (req, res, next) => {
         data.dailyScans = (data.dailyScans || 0) + 1;
         if (scanRecord.status === 'Safe') data.safeScans = (data.safeScans || 0) + 1;
         if (scanRecord.status === 'Dangerous') data.dangerousScans = (data.dangerousScans || 0) + 1;
-        if (analysis.riskScore >= 75) data.highRisk = (data.highRisk || 0) + 1;
-        if (analysis.riskScore >= 30 && analysis.riskScore < 75) data.mediumRisk = (data.mediumRisk || 0) + 1;
-        if (analysis.riskScore >= 90) data.criticalRisk = (data.criticalRisk || 0) + 1;
+        
+        const threatLvl = getThreatLevel(analysis.riskScore);
+        if (threatLvl === 'High Risk') data.highRisk = (data.highRisk || 0) + 1;
+        if (threatLvl === 'Medium Risk') data.mediumRisk = (data.mediumRisk || 0) + 1;
+        if (threatLvl === 'Critical') data.criticalRisk = (data.criticalRisk || 0) + 1;
 
         transaction.set(analyticsDocRef, data, { merge: true });
       });

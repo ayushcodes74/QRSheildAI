@@ -1,4 +1,5 @@
 const net = require('net');
+const { getThreatLevel } = require('./severityPolicy');
 
 /**
  * Helper: Extract domain from URL (reused from controllers or custom logic to ensure safety)
@@ -323,11 +324,7 @@ function evaluate({ payload, qrType, domain, safeBrowsingRes, virusTotalRes, ope
   finalRiskScore = Math.max(0, Math.min(finalRiskScore, 100));
 
   // Threshold / Threat Level Mapping
-  let threatLevel = "Safe";
-  if (finalRiskScore >= 81) threatLevel = "Critical";
-  else if (finalRiskScore >= 61) threatLevel = "High Risk";
-  else if (finalRiskScore >= 41) threatLevel = "Medium Risk";
-  else if (finalRiskScore >= 21) threatLevel = "Low Risk";
+  const threatLevel = getThreatLevel(finalRiskScore);
 
   // Recommendation Mapping
   let recommendation = "Proceed";

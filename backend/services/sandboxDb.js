@@ -1,5 +1,6 @@
 // Sandbox In-Memory Database for Offline/Demo Mode
 const bcrypt = require('bcryptjs');
+const { getThreatLevel, getRiskStatus } = require('./severityPolicy');
 
 const users = [];
 const scans = [];
@@ -35,7 +36,7 @@ const seedUsers = async () => {
       name: 'Cyber Chief Admin',
       email: 'admin@qrshield.ai',
       passwordHash: adminPasswordHash,
-      photo: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150',
+      photo: null,
       role: 'Admin',
       createdAt: new Date(Date.now() - 10 * 24 * 3600000).toISOString(),
       lastLogin: new Date().toISOString()
@@ -45,7 +46,7 @@ const seedUsers = async () => {
       name: 'Inspector Cybercop',
       email: 'police@qrshield.ai',
       passwordHash: policePasswordHash,
-      photo: 'https://images.unsplash.com/photo-1570295999919-56ceb5ecca61?w=150',
+      photo: null,
       role: 'Police',
       createdAt: new Date(Date.now() - 8 * 24 * 3600000).toISOString(),
       lastLogin: new Date().toISOString()
@@ -55,7 +56,7 @@ const seedUsers = async () => {
       name: 'Ayush Kumar',
       email: 'user@qrshield.ai',
       passwordHash: userPasswordHash,
-      photo: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150',
+      photo: null,
       role: 'User',
       createdAt: new Date(Date.now() - 5 * 24 * 3600000).toISOString(),
       lastLogin: new Date().toISOString()
@@ -262,11 +263,11 @@ module.exports = {
       
       analytics[dateStr] = {
         dailyScans: dateScans.length,
-        safeScans: dateScans.filter(s => s.status === 'Safe').length,
-        dangerousScans: dateScans.filter(s => s.status === 'Dangerous').length,
-        highRisk: dateScans.filter(s => s.riskScore >= 75).length,
-        mediumRisk: dateScans.filter(s => s.riskScore >= 30 && s.riskScore < 75).length,
-        criticalRisk: dateScans.filter(s => s.riskScore >= 90).length,
+        safeScans: dateScans.filter(s => getRiskStatus(s.riskScore) === 'Safe').length,
+        dangerousScans: dateScans.filter(s => getRiskStatus(s.riskScore) === 'Dangerous').length,
+        highRisk: dateScans.filter(s => getThreatLevel(s.riskScore) === 'High Risk').length,
+        mediumRisk: dateScans.filter(s => getThreatLevel(s.riskScore) === 'Medium Risk').length,
+        criticalRisk: dateScans.filter(s => getThreatLevel(s.riskScore) === 'Critical').length,
         reportsToday: dateReports.length
       };
     }

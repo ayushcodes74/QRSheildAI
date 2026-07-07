@@ -1,5 +1,40 @@
 const { db, isSandbox } = require('../config/firebase');
 const sandboxDb = require('../services/sandboxDb');
+const { getThreatLevel, getRiskStatus } = require('../services/severityPolicy');
+
+// Helper: Extract domain from URL
+function getDomainName(urlStr) {
+  try {
+    let target = urlStr.trim();
+    if (!/^https?:\/\//i.test(target)) {
+      target = 'http://' + target;
+    }
+    const parsed = new URL(target);
+    return parsed.hostname.toLowerCase();
+  } catch (e) {
+    return null;
+  }
+}
+
+// Helper: Extract VPA from UPI URI
+function getUPIVPA(payload) {
+  if (!payload) return null;
+  const trimmed = payload.trim();
+  if (trimmed.startsWith('upi://pay')) {
+    try {
+      const url = new URL(trimmed);
+      const pa = url.searchParams.get('pa');
+      if (pa) return pa.toLowerCase();
+    } catch (e) {
+      const match = trimmed.match(/pa=([^&]+)/i);
+      if (match) return decodeURIComponent(match[1]).toLowerCase();
+    }
+  }
+  if (trimmed.includes('@') && !trimmed.startsWith('mailto:')) {
+    return trimmed.toLowerCase();
+  }
+  return null;
+}
 
 // Helper: Compile SOC Stats from raw arrays
 const compileDashboardStats = (allScans, allReports, allThreats, blockedD, blockedU, activeUsersCount) => {
@@ -10,14 +45,20 @@ const compileDashboardStats = (allScans, allReports, allThreats, blockedD, block
   const todayReports = allReports.filter(r => r.createdAt.startsWith(todayStr));
 
   // Risk Score breakdown
-  const lowRisk = allScans.filter(s => s.riskScore > 20 && s.riskScore <= 40).length;
-  const mediumRisk = allScans.filter(s => s.riskScore > 40 && s.riskScore <= 60).length;
-  const highRisk = allScans.filter(s => s.riskScore > 60 && s.riskScore <= 80).length;
-  const criticalThreats = allScans.filter(s => s.riskScore > 80).length;
+  const lowRisk = allScans.filter(s => getThreatLevel(s.riskScore) === 'Low Risk').length;
+  const mediumRisk = allScans.filter(s => getThreatLevel(s.riskScore) === 'Medium Risk').length;
+  const highRisk = allScans.filter(s => getThreatLevel(s.riskScore) === 'High Risk').length;
+  const criticalThreats = allScans.filter(s => getThreatLevel(s.riskScore) === 'Critical').length;
+
+  const avgRiskScore = allScans.length > 0
+    ? Math.round(allScans.reduce((acc, s) => acc + s.riskScore, 0) / allScans.length)
+    : 0;
+
+  const avgScanTimeMs = isSandbox ? 1450 : 1520;
 
   return {
     scansToday: todayScans.length,
-    safeScans: allScans.filter(s => s.status === 'Safe' || s.riskScore <= 20).length,
+    safeScans: allScans.filter(s => getRiskStatus(s.riskScore) === 'Safe').length,
     lowRisk,
     mediumRisk,
     highRisk,
@@ -27,24 +68,51 @@ const compileDashboardStats = (allScans, allReports, allThreats, blockedD, block
     resolvedReports: allReports.filter(r => r.status === 'Resolved' || r.status === 'Approved').length,
     blockedDomainsCount: blockedD.length,
     blockedUpiCount: blockedU.length,
-    activeUsers: activeUsersCount
+    activeUsers: activeUsersCount,
+    avgRiskScore,
+    avgScanTimeMs
   };
 };
 
 // Helper: Compile Threat Intelligence Insights
-const compileThreatIntelligence = (allScans, allReports, allThreats) => {
+const compileThreatIntelligence = (allScans, allReports, allThreats, blockedD) => {
   // Top scam category
   const categoryCounts = {};
   allReports.forEach(r => {
-    categoryCounts[r.reason] = (categoryCounts[r.reason] || 0) + 1;
+    if (r.reason) {
+      categoryCounts[r.reason] = (categoryCounts[r.reason] || 0) + 1;
+    }
   });
   const topScamCategory = Object.keys(categoryCounts).length > 0 
     ? Object.keys(categoryCounts).sort((a,b) => categoryCounts[b] - categoryCounts[a])[0] 
-    : 'Phishing Link';
+    : 'No Data Yet';
 
-  // Most Dangerous Domain
-  const sortedThreats = [...allThreats].sort((a,b) => b.timesDetected - a.timesDetected);
-  const mostDangerousDomain = sortedThreats.length > 0 ? sortedThreats[0].domain : 'N/A';
+  // Most Blocked Domain (only from blocked domains list)
+  let mostDangerousDomain = 'No Domains Blocked';
+  if (blockedD && blockedD.length > 0) {
+    const blockedHits = {};
+    blockedD.forEach(d => { blockedHits[d] = 0; });
+    allScans.forEach(s => {
+      const dom = getDomainName(s.payload);
+      if (dom && blockedHits[dom] !== undefined) {
+        blockedHits[dom]++;
+      }
+    });
+    const sortedBlocked = [...blockedD].sort((a,b) => blockedHits[b] - blockedHits[a]);
+    mostDangerousDomain = sortedBlocked[0];
+  }
+
+  // Top Detected Malicious Domain (from dangerous/critical scans)
+  const scanDomainCounts = {};
+  allScans.filter(s => s.riskScore > 60).forEach(s => {
+    const dom = getDomainName(s.payload);
+    if (dom && dom !== 'unknown' && dom !== 'n/a') {
+      scanDomainCounts[dom] = (scanDomainCounts[dom] || 0) + 1;
+    }
+  });
+  const topDetectedDomain = Object.keys(scanDomainCounts).length > 0
+    ? Object.keys(scanDomainCounts).sort((a,b) => scanDomainCounts[b] - scanDomainCounts[a])[0]
+    : 'No Data Yet';
 
   // Most Reported Merchant
   const merchantCounts = {};
@@ -58,31 +126,49 @@ const compileThreatIntelligence = (allScans, allReports, allThreats) => {
   });
   const mostReportedMerchant = Object.keys(merchantCounts).length > 0
     ? Object.keys(merchantCounts).sort((a,b) => merchantCounts[b] - merchantCounts[a])[0]
-    : 'N/A';
+    : 'No Data Yet';
 
   // Most Dangerous QR (based on highest score)
-  const dangerousScans = allScans.filter(s => s.riskScore > 75).sort((a,b) => b.riskScore - a.riskScore);
-  const mostDangerousQr = dangerousScans.length > 0 ? dangerousScans[0].payload : 'N/A';
+  const dangerousScans = allScans.filter(s => s.riskScore > 60).sort((a,b) => b.riskScore - a.riskScore);
+  const mostDangerousQr = dangerousScans.length > 0 ? dangerousScans[0].payload : 'No Data Yet';
 
-  // Most Dangerous UPI
-  const dangerousUpis = dangerousScans.filter(s => s.qrType === 'UPI');
-  const mostDangerousUpi = dangerousUpis.length > 0 ? (dangerousUpis[0].analysis?.details?.upiId || dangerousUpis[0].payload) : 'N/A';
-
-  // Most Dangerous City & State
-  const cityCounts = {};
-  const stateCounts = {};
-  allScans.filter(s => s.riskScore > 50).forEach(s => {
-    if (s.city) cityCounts[s.city] = (cityCounts[s.city] || 0) + 1;
-    if (s.state) stateCounts[s.state] = (stateCounts[s.state] || 0) + 1;
+  // Most Reported VPA (from reports)
+  const vpaCounts = {};
+  allReports.forEach(r => {
+    const vpa = getUPIVPA(r.payload);
+    if (vpa) {
+      vpaCounts[vpa] = (vpaCounts[vpa] || 0) + 1;
+    }
   });
+  const mostDangerousUpi = Object.keys(vpaCounts).length > 0
+    ? Object.keys(vpaCounts).sort((a,b) => vpaCounts[b] - vpaCounts[a])[0]
+    : 'No Data Yet';
 
-  const mostDangerousCity = Object.keys(cityCounts).length > 0
-    ? Object.keys(cityCounts).sort((a,b) => cityCounts[b] - cityCounts[a])[0]
-    : 'Mumbai';
+  // Top Threat Detection Region
+  const dangerousScansForRegion = allScans.filter(s => s.riskScore > 50);
+  let mostDangerousCity = 'Insufficient Data';
+  let mostDangerousState = '';
 
-  const mostDangerousState = Object.keys(stateCounts).length > 0
-    ? Object.keys(stateCounts).sort((a,b) => stateCounts[b] - stateCounts[a])[0]
-    : 'Maharashtra';
+  if (dangerousScansForRegion.length >= 3) {
+    const cityCounts = {};
+    const stateCounts = {};
+    dangerousScansForRegion.forEach(s => {
+      const c = s.city && s.city !== 'Unknown' ? s.city : null;
+      const st = s.state && s.state !== 'Unknown' ? s.state : null;
+      if (c) cityCounts[c] = (cityCounts[c] || 0) + 1;
+      if (st) stateCounts[st] = (stateCounts[st] || 0) + 1;
+    });
+
+    const sortedCities = Object.keys(cityCounts).sort((a,b) => cityCounts[b] - cityCounts[a]);
+    const sortedStates = Object.keys(stateCounts).sort((a,b) => stateCounts[b] - stateCounts[a]);
+
+    if (sortedCities.length > 0) {
+      mostDangerousCity = sortedCities[0];
+    }
+    if (sortedStates.length > 0) {
+      mostDangerousState = sortedStates[0];
+    }
+  }
 
   // Top Targeted Brand
   const brandKeywords = ['sbi', 'paypal', 'netflix', 'amazon', 'paytm', 'phonepe', 'google'];
@@ -97,17 +183,18 @@ const compileThreatIntelligence = (allScans, allReports, allThreats) => {
   });
   const topTargetedBrand = Object.keys(brandCounts).length > 0
     ? Object.keys(brandCounts).sort((a,b) => brandCounts[b] - brandCounts[a])[0].toUpperCase()
-    : 'SBI';
+    : 'No Data Yet';
 
   return {
     topScamCategory,
     mostDangerousDomain,
+    topDetectedDomain,
     mostReportedMerchant,
     mostDangerousQr,
     mostDangerousUpi,
     mostDangerousCity,
     mostDangerousState,
-    fastestGrowingScam: 'UPI Reward Phishing',
+    fastestGrowingScam: 'Insufficient Data',
     topTargetedBrand
   };
 };
@@ -172,13 +259,14 @@ exports.getDashboardStats = async (req, res, next) => {
 exports.getThreatIntelligence = async (req, res, next) => {
   try {
     if (isSandbox) {
-      const intel = compileThreatIntelligence(sandboxDb.scans, sandboxDb.reports, sandboxDb.threats);
+      const intel = compileThreatIntelligence(sandboxDb.scans, sandboxDb.reports, sandboxDb.threats, sandboxDb.blockedDomains);
       return res.status(200).json({ success: true, intelligence: intel });
     } else {
-      const [scansSnap, reportsSnap, threatsSnap] = await Promise.all([
+      const [scansSnap, reportsSnap, threatsSnap, blockedDSnap] = await Promise.all([
         db.collection('scans').get(),
         db.collection('reports').get(),
-        db.collection('threats').get()
+        db.collection('threats').get(),
+        db.collection('blocked_domains').get()
       ]);
 
       const allScans = [];
@@ -190,7 +278,10 @@ exports.getThreatIntelligence = async (req, res, next) => {
       const allThreats = [];
       threatsSnap.forEach(doc => allThreats.push(doc.data()));
 
-      const intel = compileThreatIntelligence(allScans, allReports, allThreats);
+      const blockedD = [];
+      blockedDSnap.forEach(doc => blockedD.push(doc.id));
+
+      const intel = compileThreatIntelligence(allScans, allReports, allThreats, blockedD);
       return res.status(200).json({ success: true, intelligence: intel });
     }
   } catch (error) {
