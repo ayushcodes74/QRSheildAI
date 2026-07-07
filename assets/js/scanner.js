@@ -20,8 +20,12 @@ function initScannerUI() {
   const resetBtn = document.getElementById('reset-scan-btn');
   
   if (startCamBtn) {
-    startCamBtn.addEventListener('click', startCameraScanning);
-  }
+  startCamBtn.addEventListener('click', (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    startCameraScanning();
+  });
+}
   
   if (stopCamBtn) {
     stopCamBtn.addEventListener('click', stopCameraScanning);
