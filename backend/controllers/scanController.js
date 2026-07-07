@@ -3,6 +3,7 @@ const sandboxDb = require('../services/sandboxDb');
 const googleSafeBrowsing = require('../services/googleSafeBrowsing');
 const virusTotal = require('../services/virusTotal');
 const openRouter = require('../services/openRouter');
+const riskEngine = require('../services/riskEngine');
 
 // In-Memory API Cache to protect key quotas (TTL: 5 minutes)
 const apiCache = {};
@@ -139,183 +140,26 @@ exports.createScan = async (req, res, next) => {
         getCommunityReportsCount(normalizedPayload, domain)
       ]);
 
-      // 3. Compute Risk Score using the Weighted Risk Engine
-      let calculatedScore = 0;
-      const technicalIndicators = [];
-      const threatsDetected = [];
-
-      // Google Safe Browsing Hit (+40)
-      if (isUrl && !safeBrowsingRes.isSafe) {
-        calculatedScore += 40;
-        threatsDetected.push('Malicious Web Link');
-        technicalIndicators.push(`Google Safe Browsing Blocklist (${safeBrowsingRes.threatType})`);
-      }
-
-      // VirusTotal Malicious (+35)
-      if (isUrl && virusTotalRes.malicious > 0) {
-        calculatedScore += 35;
-        threatsDetected.push('Malicious URL Detection');
-        technicalIndicators.push(`VirusTotal Malicious Vendors (${virusTotalRes.ratio})`);
-      }
-
-      // VirusTotal Suspicious (+20)
-      if (isUrl && virusTotalRes.suspicious > 0) {
-        calculatedScore += 20;
-        threatsDetected.push('Suspicious URL Detection');
-        technicalIndicators.push('VirusTotal Suspicious Flag');
-      }
-
-      // AI Confidence Above 90% (+30)
-      if (openRouterRes.confidence > 90 && openRouterRes.riskScore > 50) {
-        calculatedScore += 30;
-        technicalIndicators.push('AI High-Confidence Threat Flag');
-      }
-
-      // Community Reports (+20)
-      if (communityCount > 0) {
-        calculatedScore += 20;
-        threatsDetected.push('Community Reported Phishing');
-        technicalIndicators.push(`Scam Reported by ${communityCount} User(s)`);
-      }
-
-      // HTTP missing SSL (+15)
-      const isHttp = isUrl && normalizedPayload.startsWith('http://');
-      if (isHttp) {
-        calculatedScore += 15;
-        technicalIndicators.push('Insecure HTTP Connection');
-      }
-
-      // Short URL (+10)
-      const URL_SHORTENERS = ["bit.ly", "tinyurl.com", "t.co", "goo.gl", "is.gd", "buff.ly", "adf.ly", "ow.ly", "rebrand.ly", "git.io", "tiny.cc", "t.ly"];
-      const isShortened = isUrl && URL_SHORTENERS.some(short => domain === short || domain.endsWith('.' + short));
-      if (isShortened) {
-        calculatedScore += 10;
-        threatsDetected.push('Short URL Redirection');
-        technicalIndicators.push('URL Shortener Link');
-      }
-
-      // Parse threat indicator categories returned by AI response
-      if (openRouterRes.threatsDetected && Array.isArray(openRouterRes.threatsDetected)) {
-        openRouterRes.threatsDetected.forEach(threat => {
-          const term = threat.toLowerCase();
-
-          // Typosquatting (+20)
-          if (term.includes('typo') || term.includes('look-alike')) {
-            calculatedScore += 20;
-            threatsDetected.push('Typosquatting');
-            technicalIndicators.push('Typosquatting Look-alike Domain');
-          }
-          // Spoofed Domain (+20)
-          if (term.includes('spoof')) {
-            calculatedScore += 20;
-            threatsDetected.push('Spoofed Domain');
-            technicalIndicators.push('Spoofed Brand Domain');
-          }
-          // Unknown Domain (+10)
-          if (term.includes('unknown domain') || term.includes('unrecognized')) {
-            calculatedScore += 10;
-            technicalIndicators.push('Unknown Domain Registry');
-          }
-          // Recently Registered (+20)
-          if (term.includes('recent') || term.includes('newly registered')) {
-            calculatedScore += 20;
-            technicalIndicators.push('Recently Registered Domain');
-          }
-          // Redirect Chain (+15)
-          if (term.includes('redirect') || term.includes('chain')) {
-            calculatedScore += 15;
-            technicalIndicators.push('Redirect Chain');
-          }
-          // Credential Harvesting (+30)
-          if (term.includes('harvest') || term.includes('credential')) {
-            calculatedScore += 30;
-            threatsDetected.push('Credential Harvesting');
-            technicalIndicators.push('Credential Harvesting forms');
-          }
-          // Financial Scam (+30)
-          if (term.includes('financial') || term.includes('gateway') || term.includes('payment scam')) {
-            calculatedScore += 30;
-            threatsDetected.push('Financial Fraud Scam');
-            technicalIndicators.push('Financial Scam indicators');
-          }
-          // Sticker Replacement (+20)
-          if (term.includes('sticker') || term.includes('replacement')) {
-            calculatedScore += 20;
-            threatsDetected.push('Sticker Replacement');
-            technicalIndicators.push('QR Sticker replacement possibility');
-          }
-          // Fake Banking (+25)
-          if (term.includes('banking') || term.includes('fake bank')) {
-            calculatedScore += 25;
-            threatsDetected.push('Fake Banking Portal');
-            technicalIndicators.push('Impersonation Banking Page');
-          }
-          // Fake UPI (+20)
-          if (term.includes('fake upi') || term.includes('upi fraud')) {
-            calculatedScore += 20;
-            threatsDetected.push('Fake UPI VPA');
-            technicalIndicators.push('UPI Payment Fraud Signature');
-          }
-          // OTP Scam (+25)
-          if (term.includes('otp') || term.includes('one-time password')) {
-            calculatedScore += 25;
-            threatsDetected.push('OTP Fraud redirection');
-            technicalIndicators.push('OTP Stealing forms');
-          }
-          // Identity Theft (+25)
-          if (term.includes('identity') || term.includes('theft') || term.includes('kyc')) {
-            calculatedScore += 25;
-            threatsDetected.push('Identity Theft');
-            technicalIndicators.push('KYC Identity Theft hooks');
-          }
-          // Malware (+35)
-          if (term.includes('malware') || term.includes('apk') || term.includes('download')) {
-            calculatedScore += 35;
-            threatsDetected.push('Malware Payload');
-            technicalIndicators.push('APK/Executable Malware link');
-          }
-        });
-      }
-
-      // Add other technical indicators from AI
-      if (openRouterRes.technicalIndicators && Array.isArray(openRouterRes.technicalIndicators)) {
-        openRouterRes.technicalIndicators.forEach(ind => {
-          if (!technicalIndicators.includes(ind)) {
-            technicalIndicators.push(ind);
-          }
-        });
-      }
-
-      // Ensure threat tags are unique
-      const uniqueThreats = [...new Set(threatsDetected)];
-
-      // Clamp risk score (0-100)
-      const riskScore = Math.min(Math.max(calculatedScore, 0), 100);
-
-      // Map Final Risk Level based on computed score
-      let threatLevel = 'Safe';
-      if (riskScore > 80) threatLevel = 'Critical';
-      else if (riskScore > 60) threatLevel = 'High Risk';
-      else if (riskScore > 40) threatLevel = 'Medium Risk';
-      else if (riskScore > 20) threatLevel = 'Low Risk';
-
-      // Recommendation matching
-      let recommendation = openRouterRes.recommendation || 'Proceed';
-      if (riskScore >= 60) {
-        recommendation = 'Block';
-      } else if (riskScore >= 40) {
-        recommendation = 'Proceed Carefully';
-      }
+      // 3. Compute Risk Score using the evidence-fusion Risk Engine
+      const evaluation = riskEngine.evaluate({
+        payload,
+        qrType,
+        domain,
+        safeBrowsingRes,
+        virusTotalRes,
+        openRouterRes,
+        communityCount
+      });
 
       analysis = {
-        riskScore,
+        riskScore: evaluation.riskScore,
         confidence: openRouterRes.confidence || 85,
-        threatLevel,
-        threatCategory: openRouterRes.threatCategory || (riskScore <= 20 ? 'Safe' : 'Suspicious'),
-        threatsDetected: uniqueThreats,
+        threatLevel: evaluation.threatLevel,
+        threatCategory: openRouterRes.threatCategory || (evaluation.riskScore <= 20 ? 'Safe' : 'Suspicious'),
+        threatsDetected: evaluation.threatsDetected,
         reasoning: openRouterRes.reasoning || 'No immediate structural threats detected.',
-        recommendation,
-        technicalIndicators: technicalIndicators.length > 0 ? technicalIndicators : ['Safe Structural Format'],
+        recommendation: evaluation.recommendation,
+        technicalIndicators: evaluation.technicalIndicators,
         googleSafeBrowsing: safeBrowsingRes.isSafe ? 'Safe' : safeBrowsingRes.threatType,
         virusTotal: {
           malicious: virusTotalRes.malicious,
@@ -323,7 +167,10 @@ exports.createScan = async (req, res, next) => {
           harmless: virusTotalRes.harmless,
           ratio: virusTotalRes.ratio
         },
-        communityReports: communityCount
+        communityReports: communityCount,
+        riskBreakdown: evaluation.riskBreakdown,
+        aiReasoning: evaluation.aiReasoning,
+        aiObservations: evaluation.aiObservations
       };
 
       // Set Cache

@@ -40,7 +40,7 @@ function parseAIResponse(text) {
 // Sandbox Mode Mock Generator
 function getMockAIResponse(payload) {
   const normalized = payload.toLowerCase();
-  
+
   // 1. UPI Payload Analysis Simulation
   if (normalized.startsWith('upi://pay') || (normalized.includes('@') && (normalized.includes('upi') || normalized.includes('ybl') || normalized.includes('okaxis')))) {
     const isMockThreat = normalized.includes('phish') || normalized.includes('scam') || normalized.includes('fake') || normalized.includes('cashback') || normalized.includes('reward');
@@ -70,13 +70,13 @@ function getMockAIResponse(payload) {
 
   // 2. URL Phishing Simulation
   if (/^https?:\/\//i.test(payload) || normalized.includes('.com') || normalized.includes('.xyz') || normalized.includes('.net')) {
-    const isMockThreat = normalized.includes('phish') || 
-                         normalized.includes('malware') || 
-                         normalized.includes('fakebank') || 
-                         normalized.includes('verification') || 
-                         normalized.includes('secure-login') ||
-                         normalized.includes('xyz') ||
-                         normalized.includes('giveaway');
+    const isMockThreat = normalized.includes('phish') ||
+      normalized.includes('malware') ||
+      normalized.includes('fakebank') ||
+      normalized.includes('verification') ||
+      normalized.includes('secure-login') ||
+      normalized.includes('xyz') ||
+      normalized.includes('giveaway');
 
     if (isMockThreat) {
       return {
@@ -141,8 +141,8 @@ async function analyzePayload(payload) {
   }
 
   const modelsList = [
-    'google/gemini-2.5-flash',
     'deepseek/deepseek-chat',
+    'google/gemini-2.5-flash',
     'qwen/qwen-2.5-72b-instruct',
     'mistralai/mistral-7b-instruct'
   ];
@@ -152,7 +152,7 @@ async function analyzePayload(payload) {
   for (const model of modelsList) {
     try {
       console.log(`[OpenRouter] Querying completion using model: ${model}`);
-      
+
       const response = await axios.post(
         'https://openrouter.ai/api/v1/chat/completions',
         {
@@ -161,7 +161,9 @@ async function analyzePayload(payload) {
             { role: 'system', content: SYSTEM_PROMPT },
             { role: 'user', content: `Analyze this QR Payload: "${payload}"` }
           ],
-          response_format: { type: 'json_object' }
+          response_format: { type: 'json_object' },
+          max_tokens: 1200,
+          temperature: 0.1
         },
         {
           headers: {
@@ -181,7 +183,7 @@ async function analyzePayload(payload) {
         console.log(`[OpenRouter] Success using model: ${model}`);
         return result;
       }
-      
+
       lastError = new Error('Model returned unparsable JSON response');
     } catch (error) {
       const errMsg = error.response?.data?.error?.message || error.message;
