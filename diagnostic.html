@@ -1,0 +1,475 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>QR Shield AI - System Connectivity Diagnostics</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700;800&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-dark: #0a0f1d;
+      --card-bg: #141c33;
+      --text-main: #f1f5f9;
+      --text-muted: #94a3b8;
+      --accent-cyan: #06b6d4;
+      --accent-green: #10b981;
+      --accent-red: #ef4444;
+      --border-color: rgba(255, 255, 255, 0.08);
+    }
+    
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+    
+    body {
+      background-color: var(--bg-dark);
+      color: var(--text-main);
+      font-family: 'Outfit', sans-serif;
+      line-height: 1.6;
+      padding: 40px 20px;
+      max-width: 900px;
+      margin: 0 auto;
+    }
+    
+    h1 {
+      font-family: 'Space Grotesk', sans-serif;
+      font-weight: 700;
+      font-size: 2rem;
+      margin-bottom: 8px;
+      color: #fff;
+      background: linear-gradient(135deg, #fff 30%, var(--accent-cyan));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    
+    .subtitle {
+      color: var(--text-muted);
+      margin-bottom: 30px;
+      font-size: 1.1rem;
+    }
+    
+    .status-bar {
+      background: var(--card-bg);
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      padding: 16px;
+      margin-bottom: 24px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 20px;
+      justify-content: space-between;
+      align-items: center;
+    }
+    
+    .status-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    
+    .status-label {
+      color: var(--text-muted);
+      font-size: 0.9rem;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    
+    .status-value {
+      font-weight: 700;
+    }
+    
+    .badge {
+      display: inline-block;
+      padding: 4px 10px;
+      border-radius: 6px;
+      font-size: 0.85rem;
+      font-weight: 700;
+    }
+    
+    .badge-online {
+      background: rgba(16, 185, 129, 0.1);
+      color: var(--accent-green);
+      border: 1px solid rgba(16, 185, 129, 0.2);
+    }
+    
+    .badge-offline {
+      background: rgba(239, 68, 68, 0.1);
+      color: var(--accent-red);
+      border: 1px solid rgba(239, 68, 68, 0.2);
+    }
+    
+    .btn-run {
+      background: linear-gradient(135deg, var(--accent-cyan), #0891b2);
+      color: #fff;
+      border: none;
+      padding: 12px 24px;
+      border-radius: 8px;
+      font-weight: 700;
+      cursor: pointer;
+      font-family: inherit;
+      transition: transform 0.2s, box-shadow 0.2s;
+    }
+    
+    .btn-run:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(6, 182, 212, 0.3);
+    }
+    
+    .btn-run:active {
+      transform: translateY(0);
+    }
+    
+    .results-container {
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+    
+    .test-card {
+      background: var(--card-bg);
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      padding: 24px;
+      position: relative;
+      overflow: hidden;
+      transition: border-color 0.3s;
+    }
+    
+    .test-card.running {
+      border-color: var(--accent-cyan);
+    }
+    
+    .test-card.pass {
+      border-color: var(--accent-green);
+    }
+    
+    .test-card.fail {
+      border-color: var(--accent-red);
+    }
+    
+    .test-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 16px;
+    }
+    
+    .test-title {
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 1.2rem;
+      font-weight: 700;
+    }
+    
+    .test-badge {
+      font-size: 0.8rem;
+      text-transform: uppercase;
+      padding: 4px 8px;
+      border-radius: 4px;
+      font-weight: 700;
+    }
+    
+    .test-badge.pending {
+      background: rgba(148, 163, 184, 0.1);
+      color: var(--text-muted);
+    }
+    
+    .test-badge.running {
+      background: rgba(6, 182, 212, 0.1);
+      color: var(--accent-cyan);
+    }
+    
+    .test-badge.pass {
+      background: rgba(16, 185, 129, 0.1);
+      color: var(--accent-green);
+    }
+    
+    .test-badge.fail {
+      background: rgba(239, 68, 68, 0.1);
+      color: var(--accent-red);
+    }
+    
+    .test-details {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 12px;
+      margin-bottom: 16px;
+      font-size: 0.9rem;
+    }
+    
+    .detail-item {
+      display: flex;
+      flex-direction: column;
+    }
+    
+    .detail-label {
+      color: var(--text-muted);
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      margin-bottom: 2px;
+    }
+    
+    .detail-value {
+      font-family: monospace;
+      color: #f8fafc;
+      word-break: break-all;
+    }
+    
+    .response-box {
+      background: rgba(0, 0, 0, 0.25);
+      border-radius: 6px;
+      padding: 12px;
+      font-family: monospace;
+      font-size: 0.85rem;
+      overflow-x: auto;
+      max-height: 200px;
+      white-space: pre-wrap;
+      word-break: break-all;
+      border: 1px solid rgba(255, 255, 255, 0.04);
+    }
+  </style>
+</head>
+<body>
+  <h1>System Connectivity Diagnostics</h1>
+  <p class="subtitle">Diagnostic tool to trace production browser-to-backend network requests sequentially.</p>
+  
+  <div class="status-bar">
+    <div class="status-item">
+      <span class="status-label">Network Status:</span>
+      <span id="network-badge" class="badge badge-online">Online</span>
+    </div>
+    <div class="status-item">
+      <span class="status-label">Configured API Base URL:</span>
+      <span id="api-base-val" class="status-value font-mono">Loading...</span>
+    </div>
+    <button class="btn-run" id="btn-start-tests">Run Diagnostics</button>
+  </div>
+  
+  <div class="results-container" id="results">
+    <!-- Test cards will be dynamically generated here -->
+  </div>
+  
+  <script src="assets/js/config.js"></script>
+  <script>
+    // Set API Base URL on UI
+    document.getElementById('api-base-val').textContent = API_BASE_URL;
+    
+    // Manage online/offline state
+    const networkBadge = document.getElementById('network-badge');
+    function updateNetworkStatus() {
+      if (navigator.onLine) {
+        networkBadge.textContent = 'Online';
+        networkBadge.className = 'badge badge-online';
+      } else {
+        networkBadge.textContent = 'Offline';
+        networkBadge.className = 'badge badge-offline';
+      }
+    }
+    
+    window.addEventListener('online', updateNetworkStatus);
+    window.addEventListener('offline', updateNetworkStatus);
+    updateNetworkStatus();
+    
+    // Define tests
+    const tests = [
+      {
+        id: 1,
+        title: 'TEST 1: GET Backend Root /',
+        method: 'GET',
+        getPath: () => `${API_BASE_URL}/`,
+        headers: {},
+        body: null
+      },
+      {
+        id: 2,
+        title: 'TEST 2: GET Health /api/health',
+        method: 'GET',
+        getPath: () => `${API_BASE_URL}/api/health`,
+        headers: {},
+        body: null
+      },
+      {
+        id: 3,
+        title: 'TEST 3: POST Echo /api/echo (text/plain)',
+        method: 'POST',
+        getPath: () => `${API_BASE_URL}/api/echo`,
+        headers: { 'Content-Type': 'text/plain' },
+        body: 'Plain text payload validation'
+      },
+      {
+        id: 4,
+        title: 'TEST 4: POST Echo /api/echo (application/json)',
+        method: 'POST',
+        getPath: () => `${API_BASE_URL}/api/echo`,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ hello: 'world', test: true })
+      },
+      {
+        id: 5,
+        title: 'TEST 5: POST Scan /scan (application/json)',
+        method: 'POST',
+        getPath: () => `${API_BASE_URL}/scan`,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          payload: 'https://example.com',
+          city: 'Bhopal',
+          latitude: 23.2599,
+          longitude: 77.4126
+        })
+      }
+    ];
+    
+    // Render initial test cards
+    const resultsContainer = document.getElementById('results');
+    
+    function initCards() {
+      resultsContainer.innerHTML = '';
+      tests.forEach(t => {
+        const card = document.createElement('div');
+        card.className = 'test-card';
+        card.id = `test-card-${t.id}`;
+        card.innerHTML = `
+          <div class="test-header">
+            <span class="test-title">${t.title}</span>
+            <span class="test-badge pending" id="test-badge-${t.id}">Pending</span>
+          </div>
+          <div class="test-details" id="test-details-${t.id}" style="display: none;"></div>
+          <div class="response-box" id="test-res-${t.id}" style="display: none;"></div>
+        `;
+        resultsContainer.appendChild(card);
+      });
+    }
+    
+    initCards();
+    
+    document.getElementById('btn-start-tests').addEventListener('click', runAllTests);
+    
+    async function runAllTests() {
+      initCards();
+      document.getElementById('btn-start-tests').disabled = true;
+      document.getElementById('btn-start-tests').textContent = 'Running...';
+      
+      for (const t of tests) {
+        await executeTest(t);
+      }
+      
+      document.getElementById('btn-start-tests').disabled = false;
+      document.getElementById('btn-start-tests').textContent = 'Run Diagnostics';
+    }
+    
+    async function executeTest(t) {
+      const card = document.getElementById(`test-card-${t.id}`);
+      const badge = document.getElementById(`test-badge-${t.id}`);
+      const details = document.getElementById(`test-details-${t.id}`);
+      const resBox = document.getElementById(`test-res-${t.id}`);
+      
+      card.className = 'test-card running';
+      badge.textContent = 'Running';
+      badge.className = 'test-badge running';
+      
+      const startTime = new Date().toISOString();
+      const url = t.getPath();
+      
+      details.style.display = 'grid';
+      details.innerHTML = `
+        <div class="detail-item">
+          <span class="detail-label">Start Time</span>
+          <span class="detail-value">${startTime}</span>
+        </div>
+        <div class="detail-item">
+          <span class="detail-label">URL</span>
+          <span class="detail-value">${url}</span>
+        </div>
+        <div class="detail-item">
+          <span class="detail-label">Method</span>
+          <span class="detail-value">${t.method}</span>
+        </div>
+        <div class="detail-item">
+          <span class="detail-label">navigator.onLine</span>
+          <span class="detail-value">${navigator.onLine}</span>
+        </div>
+        <div class="detail-item">
+          <span class="detail-label">window.origin</span>
+          <span class="detail-value">${window.location.origin}</span>
+        </div>
+      `;
+      
+      let status = 'N/A';
+      let responseBody = '';
+      let errorName = 'None';
+      let errorMessage = 'None';
+      let pass = false;
+      
+      try {
+        const fetchOptions = {
+          method: t.method,
+          headers: t.headers
+        };
+        if (t.body) {
+          fetchOptions.body = t.body;
+        }
+        
+        const res = await fetch(url, fetchOptions);
+        status = res.status;
+        responseBody = await res.text();
+        
+        if (res.ok) {
+          pass = true;
+        } else {
+          errorName = 'HTTPError';
+          errorMessage = `Server returned status: ${res.status} ${res.statusText}`;
+        }
+      } catch (err) {
+        errorName = err.name || 'Error';
+        errorMessage = err.message || String(err);
+      }
+      
+      const endTime = new Date().toISOString();
+      
+      // Update details UI
+      details.innerHTML += `
+        <div class="detail-item">
+          <span class="detail-label">End Time</span>
+          <span class="detail-value">${endTime}</span>
+        </div>
+        <div class="detail-item">
+          <span class="detail-label">HTTP Status</span>
+          <span class="detail-value">${status}</span>
+        </div>
+        <div class="detail-item">
+          <span class="detail-label">Error Name</span>
+          <span class="detail-value" style="color: ${errorName !== 'None' ? 'var(--accent-red)' : 'var(--accent-green)'}">${errorName}</span>
+        </div>
+        <div class="detail-item">
+          <span class="detail-label">Error Message</span>
+          <span class="detail-value" style="color: ${errorMessage !== 'None' ? 'var(--accent-red)' : 'var(--text-muted)'}">${errorMessage}</span>
+        </div>
+      `;
+      
+      if (responseBody) {
+        resBox.style.display = 'block';
+        try {
+          // Pretty format JSON if possible
+          const parsed = JSON.parse(responseBody);
+          resBox.textContent = JSON.stringify(parsed, null, 2);
+        } catch (e) {
+          resBox.textContent = responseBody;
+        }
+      }
+      
+      if (pass) {
+        card.className = 'test-card pass';
+        badge.textContent = 'Pass';
+        badge.className = 'test-badge pass';
+      } else {
+        card.className = 'test-card fail';
+        badge.textContent = 'Fail';
+        badge.className = 'test-badge fail';
+      }
+    }
+  </script>
+</body>
+</html>

@@ -103,6 +103,7 @@ async function getCommunityReportsCount(normalizedPayload, domain) {
 
 // POST /scan - Unified Threat Intelligence Pipeline
 exports.createScan = async (req, res, next) => {
+  console.log('[DIAGNOSTIC] SCAN_ROUTE_ENTERED');
   try {
     const { payload, city, latitude, longitude } = req.body;
 
@@ -124,6 +125,7 @@ exports.createScan = async (req, res, next) => {
     const isUrl = qrType === 'Website' || qrType === 'PDF' || qrType === 'Play Store' || qrType === 'App Store' || qrType === 'Government' || qrType === 'Social';
 
     // 1. Check Cache First
+    console.log('[DIAGNOSTIC] SCAN_ANALYSIS_STARTED');
     let cachedAnalysis = getCachedResult(normalizedPayload);
     let analysis;
 
@@ -274,6 +276,7 @@ exports.createScan = async (req, res, next) => {
     }
 
     // 6. Return comprehensive analysis response to display on result page
+    console.log('[DIAGNOSTIC] SCAN_RESPONSE_SENT');
     return res.status(201).json({
       success: true,
       message: 'Scan analyzed and logged successfully',
@@ -281,6 +284,7 @@ exports.createScan = async (req, res, next) => {
     });
 
   } catch (error) {
+    console.error('[DIAGNOSTIC] SCAN_ERROR:', error.message);
     next(error);
   }
 };

@@ -36,7 +36,10 @@ const allowedOrigins = [
 
 app.use(cors({
   origin: (origin, callback) => {
-    if (!origin || allowedOrigins.includes(origin)) {
+    const accepted = !origin || allowedOrigins.includes(origin);
+    console.log(`[DIAGNOSTIC] CORS_CHECK - Origin: ${origin || 'null'} - Accepted: ${accepted}`);
+    
+    if (accepted) {
       return callback(null, true);
     }
 
@@ -63,12 +66,27 @@ app.use('/auth/', limiter);
 // Request parsing - increase payload limits for base64 screenshot uploads
 app.use(express.json({ limit: '15mb' }));
 app.use(express.urlencoded({ extended: true, limit: '15mb' }));
+app.use(express.text({ type: 'text/plain', limit: '15mb' }));
 
 // ==========================================
 // 2. Logging Middleware
 // ==========================================
 app.use((req, res, next) => {
   const timestamp = new Date().toISOString();
+  
+  // Lifecycle logging for diagnostic paths and scan route
+  const path = req.path;
+  if (path === '/api/health' || path === '/api/echo' || path === '/scan') {
+    console.log(`[DIAGNOSTIC] REQUEST_RECEIVED
+Method: ${req.method}
+Path: ${req.path}
+Origin: ${req.headers.origin || 'null'}
+Content-Type: ${req.headers['content-type'] || 'null'}
+User-Agent: ${req.headers['user-agent'] || 'null'}
+X-Forwarded-For: ${req.headers['x-forwarded-for'] || 'null'}
+Timestamp: ${timestamp}`);
+  }
+
   console.log(`[REQUEST] ${timestamp} - ${req.method} ${req.url} - IP: ${req.ip}`);
   
   // Hook response finish to log security events
@@ -95,6 +113,29 @@ app.get('/health', (req, res) => {
     success: true,
     service: "QR Shield AI Backend",
     status: "healthy"
+  });
+});
+
+// Diagnostic GET /api/health
+app.get('/api/health', (req, res) => {
+  const timestamp = new Date().toISOString();
+  const origin = req.headers.origin || null;
+  res.status(200).json({
+    success: true,
+    service: "qr-shield-backend",
+    timestamp,
+    origin
+  });
+});
+
+// Diagnostic POST /api/echo
+app.post('/api/echo', (req, res) => {
+  const origin = req.headers.origin || null;
+  res.status(200).json({
+    success: true,
+    body: req.body,
+    origin,
+    contentType: req.headers['content-type'] || null
   });
 });
 

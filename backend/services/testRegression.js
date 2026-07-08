@@ -37,6 +37,48 @@ process.env.NODE_ENV = 'test';
 // Import backend server (starts listening on PORT 5999)
 const { app, server } = require('../server');
 
+let isServerClosing = false;
+let serverBindTimer;
+
+function closeServer() {
+  if (isServerClosing) return;
+  isServerClosing = true;
+  
+  if (serverBindTimer) {
+    clearTimeout(serverBindTimer);
+  }
+  
+  // Close Firebase admin SDK apps
+  const admin = require('firebase-admin');
+  const closeApps = admin.apps.length > 0
+    ? Promise.all(admin.apps.map(app => app.delete()))
+    : Promise.resolve();
+    
+  closeApps.then(() => {
+    server.close(() => {
+      console.log('\n----------------------------------------');
+      console.log(`Regression Test complete: ${passedCount} / ${passedCount + failedCount} passed.`);
+      console.log('----------------------------------------');
+      process.exit(failedCount > 0 ? 1 : 0);
+    });
+  }).catch(err => {
+    console.error('Error closing Firebase apps:', err);
+    server.close(() => {
+      process.exit(1);
+    });
+  });
+}
+
+process.on('uncaughtException', (err) => {
+  console.error('Uncaught Exception:', err);
+  closeServer();
+});
+
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('Unhandled Rejection at:', promise, 'reason:', reason);
+  closeServer();
+});
+
 // Helper to make HTTP requests
 function makeRequest(options, body = null) {
   return new Promise((resolve, reject) => {
@@ -106,7 +148,9 @@ function createMockElement(id = '') {
 
 async function runAllTests() {
   // Wait for server to bind
-  await new Promise(r => setTimeout(r, 600));
+  await new Promise(r => {
+    serverBindTimer = setTimeout(r, 600);
+  });
 
   // Test 1: Production origin CORS preflight
   await runTest('Production origin CORS preflight OPTIONS request returns CORP cross-origin and valid CORS approval', async () => {
@@ -369,17 +413,232 @@ async function runAllTests() {
     assert.ok(explanationHtml2.includes('No reasoning details provided.'), 'HTML should use hard fallback message');
   });
 
-  // Tear down server
-  server.close(() => {
-    console.log('\n----------------------------------------');
-    console.log(`Regression Test complete: ${passedCount} / ${passedCount + failedCount} passed.`);
-    console.log('----------------------------------------');
-    if (failedCount > 0) {
-      process.exit(1);
-    } else {
-      process.exit(0);
-    }
+  // NEW TEST 7: GET /api/health from production-origin request
+  await runTest('GET /api/health from production-origin request returns CORS approvals and status 200', async () => {
+    const res = await makeRequest({
+      hostname: 'localhost',
+      port: 5999,
+      path: '/api/health',
+      method: 'GET',
+      headers: {
+        'Origin': 'https://qr-shield-ai.vercel.app'
+      }
+    });
+
+    assert.equal(res.statusCode, 200);
+    assert.equal(res.headers['access-control-allow-origin'], 'https://qr-shield-ai.vercel.app');
+    assert.equal(res.headers['access-control-allow-credentials'], 'true');
+    assert.equal(res.headers['cross-origin-resource-policy'], 'cross-origin');
+    
+    const body = JSON.parse(res.data);
+    assert.equal(body.success, true);
+    assert.equal(body.service, 'qr-shield-backend');
+    assert.equal(body.origin, 'https://qr-shield-ai.vercel.app');
+    assert.ok(body.timestamp);
   });
+
+  // NEW TEST 8: POST /api/echo with text/plain
+  await runTest('POST /api/echo with text/plain returns echoed body and CORS headers', async () => {
+    const payload = 'Plain text diagnostic test';
+    const res = await makeRequest({
+      hostname: 'localhost',
+      port: 5999,
+      path: '/api/echo',
+      method: 'POST',
+      headers: {
+        'Origin': 'https://qr-shield-ai.vercel.app',
+        'Content-Type': 'text/plain'
+      }
+    }, payload);
+
+    assert.equal(res.statusCode, 200);
+    assert.equal(res.headers['access-control-allow-origin'], 'https://qr-shield-ai.vercel.app');
+    assert.equal(res.headers['cross-origin-resource-policy'], 'cross-origin');
+    
+    const body = JSON.parse(res.data);
+    assert.equal(body.success, true);
+    assert.equal(body.body, payload);
+    assert.equal(body.contentType, 'text/plain');
+  });
+
+  // NEW TEST 9: POST /api/echo with application/json and preflight
+  await runTest('POST /api/echo with application/json preflights and echoes body', async () => {
+    // OPTIONS Preflight
+    const preflight = await makeRequest({
+      hostname: 'localhost',
+      port: 5999,
+      path: '/api/echo',
+      method: 'OPTIONS',
+      headers: {
+        'Origin': 'https://qr-shield-ai.vercel.app',
+        'Access-Control-Request-Method': 'POST',
+        'Access-Control-Request-Headers': 'content-type'
+      }
+    });
+    assert.equal(preflight.statusCode, 204);
+    assert.equal(preflight.headers['access-control-allow-origin'], 'https://qr-shield-ai.vercel.app');
+
+    // POST Request
+    const dataObj = { key: 'value', test: true };
+    const res = await makeRequest({
+      hostname: 'localhost',
+      port: 5999,
+      path: '/api/echo',
+      method: 'POST',
+      headers: {
+        'Origin': 'https://qr-shield-ai.vercel.app',
+        'Content-Type': 'application/json'
+      }
+    }, dataObj);
+
+    assert.equal(res.statusCode, 200);
+    assert.equal(res.headers['access-control-allow-origin'], 'https://qr-shield-ai.vercel.app');
+    
+    const body = JSON.parse(res.data);
+    assert.equal(body.success, true);
+    assert.deepEqual(body.body, dataObj);
+    assert.equal(body.contentType, 'application/json');
+  });
+
+  // NEW TEST 10: POST /scan reaches Express route after preflight
+  await runTest('POST /scan preflight OPTIONS and actual POST reaches the scan handler', async () => {
+    const preflight = await makeRequest({
+      hostname: 'localhost',
+      port: 5999,
+      path: '/scan',
+      method: 'OPTIONS',
+      headers: {
+        'Origin': 'https://qr-shield-ai.vercel.app',
+        'Access-Control-Request-Method': 'POST',
+        'Access-Control-Request-Headers': 'content-type'
+      }
+    });
+    assert.equal(preflight.statusCode, 204);
+
+    const res = await makeRequest({
+      hostname: 'localhost',
+      port: 5999,
+      path: '/scan',
+      method: 'POST',
+      headers: {
+        'Origin': 'https://qr-shield-ai.vercel.app',
+        'Content-Type': 'application/json'
+      }
+    }, {
+      payload: 'https://example.com'
+    });
+
+    assert.equal(res.statusCode, 201);
+    const body = JSON.parse(res.data);
+    assert.equal(body.success, true);
+  });
+
+  // NEW TEST 11: No frontend fetch wrapper aborts /scan before the timeout
+  await runTest('Frontend apiFetch wrapper behaves correctly and respects configured timeout without premature aborts', async () => {
+    const utilsCode = fs.readFileSync(path.join(__dirname, '../../assets/js/utils.js'), 'utf8');
+    
+    const documentMock = {
+      addEventListener(event, callback) {},
+      getElementById(id) {
+        return createMockElement(id);
+      },
+      createElement(tag) {
+        return createMockElement();
+      },
+      querySelector(selector) {
+        return createMockElement();
+      },
+      querySelectorAll(selector) {
+        return [];
+      },
+      head: createMockElement()
+    };
+    
+    const windowMock = {
+      location: { search: '' },
+      localStorage: { getItem() { return null; }, setItem() {} },
+      document: documentMock,
+      showToast() {},
+      // Mock fetch with configurable latency
+      fetch: async (url, options) => {
+        const signal = options.signal;
+        return new Promise((resolve, reject) => {
+          const timeoutId = setTimeout(() => {
+            resolve({
+              ok: true,
+              status: 200,
+              statusText: 'OK',
+              text: async () => '{"success":true}'
+            });
+          }, 100); // 100ms artificial latency
+          
+          if (signal) {
+            signal.addEventListener('abort', () => {
+              clearTimeout(timeoutId);
+              const err = new Error('The user aborted a request.');
+              err.name = 'AbortError';
+              reject(err);
+            });
+          }
+        });
+      }
+    };
+    
+    const runUtils = new Function('window', 'document', 'localStorage', 'fetch', utilsCode + '\nreturn { apiFetch };');
+    const { apiFetch } = runUtils(windowMock, windowMock.document, windowMock.localStorage, windowMock.fetch);
+
+    // Call with 500ms timeout - should succeed because latency is 100ms
+    try {
+      const res = await apiFetch('http://localhost:5999/api/health', {}, 500);
+      assert.ok(res.ok);
+    } catch (err) {
+      assert.fail('Should not abort when timeout is longer than latency: ' + err.message);
+    }
+
+    // Call with 50ms timeout - should fail/abort because latency is 100ms
+    let threwAbortError = false;
+    try {
+      await apiFetch('http://localhost:5999/api/health', {}, 50);
+    } catch (err) {
+      if (err.name === 'AbortError') {
+        threwAbortError = true;
+      } else {
+        throw err;
+      }
+    }
+    assert.ok(threwAbortError, 'Should abort when timeout is shorter than latency');
+  });
+
+  // NEW TEST 12: Diagnostic endpoints contain no secrets
+  await runTest('Diagnostic endpoints do not expose credentials or keys in response bodies', async () => {
+    const resHealth = await makeRequest({
+      hostname: 'localhost',
+      port: 5999,
+      path: '/api/health',
+      method: 'GET'
+    });
+    
+    const healthBodyStr = resHealth.data.toLowerCase();
+    assert.ok(!healthBodyStr.includes('key'), 'Should not contain key word');
+    assert.ok(!healthBodyStr.includes('secret'), 'Should not contain secret word');
+    assert.ok(!healthBodyStr.includes('private'), 'Should not contain private word');
+
+    const resEcho = await makeRequest({
+      hostname: 'localhost',
+      port: 5999,
+      path: '/api/echo',
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' }
+    }, { test: 'data' });
+    
+    const echoBodyStr = resEcho.data.toLowerCase();
+    assert.ok(!echoBodyStr.includes('key'));
+    assert.ok(!echoBodyStr.includes('secret'));
+    assert.ok(!echoBodyStr.includes('private'));
+  });
+
+  // Tear down server
+  closeServer();
 }
 
 runAllTests();
