@@ -51,16 +51,29 @@ function analyzeQRContent(content) {
     }
   }
 
-  // Adjust Risk Level mapping
-  if (result.riskScore <= 20) {
-    result.riskLevel = 'Safe';
-  } else if (result.riskScore <= 50) {
-    result.riskLevel = 'Medium';
-  } else if (result.riskScore <= 80) {
-    result.riskLevel = 'Suspicious';
+  // Adjust Risk Level mapping matching backend canonical policy
+  const score = result.riskScore || 0;
+  if (score >= 81) {
+    result.riskLevel = 'Critical';
+  } else if (score >= 61) {
+    result.riskLevel = 'High Risk';
+  } else if (score >= 41) {
+    result.riskLevel = 'Medium Risk';
+  } else if (score >= 21) {
+    result.riskLevel = 'Low Risk';
   } else {
-    result.riskLevel = 'Dangerous';
+    result.riskLevel = 'Safe';
   }
+
+  // Normalize and ensure all required fields are present
+  result.threatLevel = result.riskLevel;
+  result.threatCategory = result.threatCategory || (score <= 20 ? 'Safe content' : 'Threat suspect');
+  result.confidence = result.confidence || 100;
+  result.reasoning = result.reasoning || result.aiExplanation || 'The system is operating in local fallback mode because the threat intelligence API is unreachable.';
+  result.googleSafeBrowsing = result.googleSafeBrowsing || 'Safe';
+  result.virusTotal = result.virusTotal || { malicious: 0, suspicious: 0, harmless: 0, ratio: '0/0' };
+  result.communityReports = typeof result.communityReports !== 'undefined' ? result.communityReports : 0;
+  result.technicalIndicators = result.technicalIndicators || [];
 
   return result;
 }

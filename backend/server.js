@@ -22,7 +22,8 @@ app.use(helmet({
       "connect-src": ["'self'", "https://identitytoolkit.googleapis.com", "*"],
       "img-src": ["'self'", "data:", "https://images.unsplash.com", "https://storage.googleapis.com", "*"]
     }
-  }
+  },
+  crossOriginResourcePolicy: { policy: "cross-origin" }
 }));
 
 
@@ -145,11 +146,10 @@ app.use((err, req, res, next) => {
   });
 });
 
-// ==========================================
-// 6. Server Initialization
-// ==========================================
-app.listen(PORT, () => {
+const serverInstance = app.listen(PORT, () => {
   console.log(`==================================================`);
   console.log(`🛡 QR Shield AI - Backend Live at http://localhost:${PORT}`);
   console.log(`==================================================`);
 });
+
+module.exports = { app, server: serverInstance };

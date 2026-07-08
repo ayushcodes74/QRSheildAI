@@ -335,14 +335,16 @@ function handleScanSuccess(decodedText) {
           analysis.isOfflineFallback = true;
         }
       }
-    }
-
-    if (window.QRShieldUtils) {
-      window.QRShieldUtils.hideLoading();
+    } finally {
+      if (window.QRShieldUtils) {
+        window.QRShieldUtils.hideLoading();
+      }
     }
 
     if (!analysis) {
       if (window.QRShieldUtils) window.QRShieldUtils.showToast('Failed to analyze QR code payload.', 'error');
+      const riskTextEl = document.getElementById('res-risk-text');
+      if (riskTextEl) riskTextEl.textContent = 'Failed';
       return;
     }
 
@@ -401,6 +403,7 @@ function displayAnalysisResults(analysis) {
   const contentEl = document.getElementById('res-content');
   const riskLevelEl = document.getElementById('res-risk-level');
   const riskDescEl = document.getElementById('res-risk-desc');
+  const riskTextEl = document.getElementById('res-risk-text');
   const aiExplanationEl = document.getElementById('res-ai-explanation');
   
   if (!resultCard) return;
@@ -444,6 +447,11 @@ function displayAnalysisResults(analysis) {
     if (rLevel === 'Medium' || rLevel === 'Medium Risk') riskLevelEl.classList.add('badge-medium');
     if (rLevel === 'Suspicious' || rLevel === 'High Risk') riskLevelEl.classList.add('badge-suspicious');
     if (rLevel === 'Dangerous' || rLevel === 'Critical') riskLevelEl.classList.add('badge-dangerous');
+  }
+
+  // Set risk textual level directly to avoid staying stuck on "Calculating..."
+  if (riskTextEl) {
+    riskTextEl.textContent = rLevel;
   }
 
   if (riskDescEl) {
@@ -536,7 +544,7 @@ function displayAnalysisResults(analysis) {
       <div style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 8px;">
         Category: <strong>${displayCategory}</strong> | Risk Severity: <strong>${rLevel}</strong>
       </div>
-      <p style="margin-bottom: 12px; line-height: 1.5; font-size: 0.95rem;">${analysis.reasoning}</p>
+      <p style="margin-bottom: 12px; line-height: 1.5; font-size: 0.95rem;">${analysis.reasoning || analysis.aiExplanation || 'No reasoning details provided.'}</p>
       <div style="border-top: 1px dashed var(--border-color); padding-top: 10px; margin-top: 10px;">
         <strong style="color: var(--color-warning); text-transform: uppercase; font-size: 0.85rem; display: block; margin-bottom: 4px;">Recommended Action:</strong>
         <span style="font-weight: 700; font-size: 1rem; color: #fff;">${displayRec}</span>
