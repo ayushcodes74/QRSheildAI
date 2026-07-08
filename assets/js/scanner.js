@@ -297,7 +297,12 @@ function handleScanSuccess(decodedText) {
     let data = null;
 
     try {
-      const res = await apiFetch(`${API_BASE_URL}/scan`, {
+      console.log('[DIAGNOSTIC] Sending scan request to backend', {
+        endpoint: `${API_BASE_URL}/scan`,
+        payload: decodedText
+      });
+
+      const res = await window.QRShieldUtils.apiFetch(`${API_BASE_URL}/scan`, {
         method: 'POST',
         headers,
         body: JSON.stringify({
@@ -308,7 +313,15 @@ function handleScanSuccess(decodedText) {
         })
       }, 60000);
 
+      console.log('[DIAGNOSTIC] HTTP response received', {
+        status: res.status,
+        ok: res.ok,
+        statusText: res.statusText
+      });
+
       data = await res.json();
+      console.log('[DIAGNOSTIC] JSON payload parsed successfully', { data });
+
       if (res.ok && data.success) {
         // Backend successfully processed metrics!
         analysis = data.scan.analysis;
@@ -322,6 +335,7 @@ function handleScanSuccess(decodedText) {
         throw apiErr;
       }
     } catch (err) {
+      console.error('[DIAGNOSTIC] Scan request failed', err);
       console.error('[Scanner] Primary backend scan failed', {
         errorName: err.name,
         errorMessage: err.message,
