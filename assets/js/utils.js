@@ -581,6 +581,7 @@ function triggerConfetti() {
 
 // Export utilities for availability across modular scripts
 window.QRShieldUtils = {
+  apiFetch,
   showToast,
   showLoading,
   hideLoading,
