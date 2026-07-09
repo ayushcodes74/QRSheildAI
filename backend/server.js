@@ -31,14 +31,15 @@ app.use(helmet({
 const allowedOrigins = [
   'http://127.0.0.1:5500',
   'http://localhost:5500',
-  'https://qr-shield-ai.vercel.app'
+  'https://qr-shield-ai.vercel.app',
+  'https://qr-sheild-ai.vercel.app'
 ];
 
 app.use(cors({
   origin: (origin, callback) => {
     const accepted = !origin || allowedOrigins.includes(origin);
     console.log(`[DIAGNOSTIC] CORS_CHECK - Origin: ${origin || 'null'} - Accepted: ${accepted}`);
-    
+
     if (accepted) {
       return callback(null, true);
     }
@@ -73,7 +74,7 @@ app.use(express.text({ type: 'text/plain', limit: '15mb' }));
 // ==========================================
 app.use((req, res, next) => {
   const timestamp = new Date().toISOString();
-  
+
   // Lifecycle logging for diagnostic paths and scan route
   const path = req.path;
   if (path === '/api/health' || path === '/api/echo' || path === '/scan') {
@@ -88,14 +89,14 @@ Timestamp: ${timestamp}`);
   }
 
   console.log(`[REQUEST] ${timestamp} - ${req.method} ${req.url} - IP: ${req.ip}`);
-  
+
   // Hook response finish to log security events
   res.on('finish', () => {
     if (res.statusCode >= 400) {
       console.warn(`[SECURITY EVENT] ${timestamp} - Request Failed: ${req.method} ${req.url} - Status: ${res.statusCode}`);
     }
   });
-  
+
   next();
 });
 
@@ -158,7 +159,7 @@ app.get('*', (req, res, next) => {
   if (req.url.startsWith('/auth/') || req.url.startsWith('/user/') || req.url.startsWith('/scan') || req.url.startsWith('/report') || req.url.startsWith('/admin/')) {
     return next();
   }
-  
+
   // Serve the index.html or requested static file
   res.sendFile(path.join(frontendPath, 'index.html'));
 });
@@ -179,7 +180,7 @@ app.use((req, res, next) => {
 app.use((err, req, res, next) => {
   const timestamp = new Date().toISOString();
   console.error(`[ERROR] ${timestamp} - Internal Server Error:`, err.stack);
-  
+
   res.status(err.status || 500).json({
     success: false,
     message: err.message || 'An unexpected server error occurred.',
