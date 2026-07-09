@@ -6,6 +6,42 @@ const openRouter = require('../services/openRouter');
 const riskEngine = require('../services/riskEngine');
 const { getThreatLevel, getRiskStatus } = require('../services/severityPolicy');
 
+// Helper: Detect if Firestore error is due to RESOURCE_EXHAUSTED or Quota issues
+function isFirestoreResourceExhausted(error) {
+  if (!error) return false;
+  return (
+    error.code === 8 ||
+    error.code === 'RESOURCE_EXHAUSTED' ||
+    (error.message && (
+      error.message.toLowerCase().includes('resource_exhausted') ||
+      error.message.toLowerCase().includes('quota exceeded')
+    ))
+  );
+}
+
+// Helper: Wrap a promise in a timeout limit (e.g. to prevent hanging due to internal retries)
+// Ensure late resolutions/rejections are caught so they do not cause unhandled rejections
+function withTimeout(promise, timeoutMs, operationName = 'Firestore operation') {
+  return new Promise((resolve, reject) => {
+    const timer = setTimeout(() => {
+      const err = new Error(`${operationName} timed out after ${timeoutMs}ms`);
+      err.code = 8; // Treat timeout as RESOURCE_EXHAUSTED/Service Unavailable for gracefulness
+      reject(err);
+    }, timeoutMs);
+
+    promise.then(
+      (res) => {
+        clearTimeout(timer);
+        resolve(res);
+      },
+      (err) => {
+        clearTimeout(timer);
+        reject(err);
+      }
+    );
+  });
+}
+
 // In-Memory API Cache to protect key quotas (TTL: 5 minutes)
 const apiCache = {};
 const CACHE_TTL = 5 * 60 * 1000;
@@ -85,7 +121,11 @@ async function getCommunityReportsCount(normalizedPayload, domain) {
         return (domain && repUrl.includes(domain)) || repUpi === normalizedPayload || repUrl.includes(normalizedPayload);
       }).length;
     } else {
-      const snapshot = await db.collection('reports').get();
+      const snapshot = await withTimeout(
+        db.collection('reports').get(),
+        3000,
+        'Firestore community reports read'
+      );
       snapshot.forEach(doc => {
         const r = doc.data();
         const repUrl = r.url?.toLowerCase() || '';
@@ -96,7 +136,11 @@ async function getCommunityReportsCount(normalizedPayload, domain) {
       });
     }
   } catch (error) {
-    console.error('[Community Reports] Failed to fetch count:', error.message);
+    if (isFirestoreResourceExhausted(error)) {
+      console.warn('[Community Reports] Firestore RESOURCE_EXHAUSTED / Quota exceeded while fetching count. Defaulting to 0.');
+    } else {
+      console.warn(`[Community Reports] Failed to fetch count: ${error.message}. Defaulting to 0.`);
+    }
   }
   return count;
 }
@@ -231,46 +275,84 @@ exports.createScan = async (req, res, next) => {
       }
     } else {
       // Live Firestore Mode
-      await db.collection('scans').doc(scanId).set(scanRecord);
+      try {
+        await withTimeout(
+          db.collection('scans').doc(scanId).set(scanRecord),
+          3000,
+          'Firestore save scan record'
+        );
+      } catch (error) {
+        if (isFirestoreResourceExhausted(error)) {
+          console.warn('[Scan DB Write] Firestore RESOURCE_EXHAUSTED / Quota exceeded. Skipping scan history write.');
+        } else {
+          console.warn(`[Scan DB Write] Failed to save scan history: ${error.message}. Skipping scan history write.`);
+        }
+      }
 
       // Increment analytics atomically
-      const analyticsDocRef = db.collection('analytics').doc(dateStr);
-      await db.runTransaction(async (transaction) => {
-        const doc = await transaction.get(analyticsDocRef);
-        let data = { dailyScans: 0, safeScans: 0, dangerousScans: 0, highRisk: 0, mediumRisk: 0, criticalRisk: 0, reportsToday: 0 };
-        if (doc.exists) data = doc.data();
+      try {
+        const analyticsDocRef = db.collection('analytics').doc(dateStr);
+        await withTimeout(
+          db.runTransaction(async (transaction) => {
+            const doc = await transaction.get(analyticsDocRef);
+            let data = { dailyScans: 0, safeScans: 0, dangerousScans: 0, highRisk: 0, mediumRisk: 0, criticalRisk: 0, reportsToday: 0 };
+            if (doc.exists) data = doc.data();
 
-        data.dailyScans = (data.dailyScans || 0) + 1;
-        if (scanRecord.status === 'Safe') data.safeScans = (data.safeScans || 0) + 1;
-        if (scanRecord.status === 'Dangerous') data.dangerousScans = (data.dangerousScans || 0) + 1;
-        
-        const threatLvl = getThreatLevel(analysis.riskScore);
-        if (threatLvl === 'High Risk') data.highRisk = (data.highRisk || 0) + 1;
-        if (threatLvl === 'Medium Risk') data.mediumRisk = (data.mediumRisk || 0) + 1;
-        if (threatLvl === 'Critical') data.criticalRisk = (data.criticalRisk || 0) + 1;
+            data.dailyScans = (data.dailyScans || 0) + 1;
+            if (scanRecord.status === 'Safe') data.safeScans = (data.safeScans || 0) + 1;
+            if (scanRecord.status === 'Dangerous') data.dangerousScans = (data.dangerousScans || 0) + 1;
+            
+            const threatLvl = getThreatLevel(analysis.riskScore);
+            if (threatLvl === 'High Risk') data.highRisk = (data.highRisk || 0) + 1;
+            if (threatLvl === 'Medium Risk') data.mediumRisk = (data.mediumRisk || 0) + 1;
+            if (threatLvl === 'Critical') data.criticalRisk = (data.criticalRisk || 0) + 1;
 
-        transaction.set(analyticsDocRef, data, { merge: true });
-      });
+            transaction.set(analyticsDocRef, data, { merge: true });
+          }),
+          4000,
+          'Firestore transaction update analytics'
+        );
+      } catch (error) {
+        if (isFirestoreResourceExhausted(error)) {
+          console.warn('[Scan DB Write] Firestore RESOURCE_EXHAUSTED / Quota exceeded. Skipping analytics telemetry write.');
+        } else {
+          console.warn(`[Scan DB Write] Failed to update analytics telemetry: ${error.message}. Skipping analytics telemetry write.`);
+        }
+      }
 
       // Update threats collection in Firestore
       if (domain && (scanRecord.status === 'Dangerous' || analysis.riskScore >= 60)) {
-        const threatDocRef = db.collection('threats').doc(domain.replace(/\./g, '_'));
-        const doc = await threatDocRef.get();
-        if (doc.exists) {
-          const current = doc.data();
-          await threatDocRef.update({
-            timesDetected: (current.timesDetected || 0) + 1,
-            lastSeen: timestamp,
-            severity: analysis.threatLevel
-          });
-        } else {
-          await threatDocRef.set({
-            domain,
-            threatType: `${analysis.threatCategory} imposter`,
-            timesDetected: 1,
-            lastSeen: timestamp,
-            severity: analysis.threatLevel
-          });
+        try {
+          const threatDocRef = db.collection('threats').doc(domain.replace(/\./g, '_'));
+          await withTimeout(
+            (async () => {
+              const doc = await threatDocRef.get();
+              if (doc.exists) {
+                const current = doc.data();
+                await threatDocRef.update({
+                  timesDetected: (current.timesDetected || 0) + 1,
+                  lastSeen: timestamp,
+                  severity: analysis.threatLevel
+                });
+              } else {
+                await threatDocRef.set({
+                  domain,
+                  threatType: `${analysis.threatCategory} imposter`,
+                  timesDetected: 1,
+                  lastSeen: timestamp,
+                  severity: analysis.threatLevel
+                });
+              }
+            })(),
+            3000,
+            'Firestore update threats index'
+          );
+        } catch (error) {
+          if (isFirestoreResourceExhausted(error)) {
+            console.warn('[Scan DB Write] Firestore RESOURCE_EXHAUSTED / Quota exceeded. Skipping threats index update.');
+          } else {
+            console.warn(`[Scan DB Write] Failed to update threats index: ${error.message}. Skipping threats index update.`);
+          }
         }
       }
     }

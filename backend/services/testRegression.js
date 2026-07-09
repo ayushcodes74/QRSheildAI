@@ -34,6 +34,67 @@ openRouter.analyzePayload = async (payload) => {
 process.env.PORT = 5999;
 process.env.NODE_ENV = 'test';
 
+// Mock Firebase config to force live-path testing and mock collection operations
+const firebaseConfig = require('../config/firebase');
+firebaseConfig.isSandbox = false;
+
+let mockFirestoreError = null;
+
+if (!firebaseConfig.db) {
+  firebaseConfig.db = {};
+}
+
+const mockCollection = (name) => {
+  return {
+    doc: (docId) => {
+      return {
+        set: async (data) => {
+          if (mockFirestoreError) throw mockFirestoreError;
+          return {};
+        },
+        get: async () => {
+          if (mockFirestoreError) throw mockFirestoreError;
+          return {
+            exists: false,
+            data: () => ({})
+          };
+        },
+        update: async (data) => {
+          if (mockFirestoreError) throw mockFirestoreError;
+          return {};
+        }
+      };
+    },
+    get: async () => {
+      if (mockFirestoreError) throw mockFirestoreError;
+      return {
+        forEach: (cb) => {}
+      };
+    },
+    where: function() { return this; },
+    orderBy: function() { return this; }
+  };
+};
+
+const mockRunTransaction = async (updateFunction) => {
+  if (mockFirestoreError) throw mockFirestoreError;
+  const transaction = {
+    get: async (docRef) => {
+      return {
+        exists: false,
+        data: () => ({})
+      };
+    },
+    set: (docRef, data, options) => {},
+    update: (docRef, data) => {},
+    delete: (docRef) => {}
+  };
+  return updateFunction(transaction);
+};
+
+firebaseConfig.db.collection = mockCollection;
+firebaseConfig.db.runTransaction = mockRunTransaction;
+
 // Import backend server (starts listening on PORT 5999)
 const { app, server } = require('../server');
 
@@ -635,6 +696,120 @@ async function runAllTests() {
     assert.ok(!echoBodyStr.includes('key'));
     assert.ok(!echoBodyStr.includes('secret'));
     assert.ok(!echoBodyStr.includes('private'));
+  });
+
+  // NEW TEST 13: POST /scan handles Firestore RESOURCE_EXHAUSTED errors gracefully
+  await runTest('POST /scan handles Firestore RESOURCE_EXHAUSTED errors gracefully', async () => {
+    // 1. Setup mock Firestore to throw RESOURCE_EXHAUSTED
+    const quotaError = new Error('8 RESOURCE_EXHAUSTED: Quota exceeded.');
+    quotaError.code = 8;
+    mockFirestoreError = quotaError;
+
+    // 2. Make scan request
+    const res = await makeRequest({
+      hostname: 'localhost',
+      port: 5999,
+      path: '/scan',
+      method: 'POST',
+      headers: {
+        'Origin': 'https://qr-shield-ai.vercel.app',
+        'Content-Type': 'application/json'
+      }
+    }, {
+      payload: 'https://example-phish.com',
+      city: 'Bhopal',
+      latitude: 23.2599,
+      longitude: 77.4126
+    });
+
+    // 3. Reset mock error state
+    mockFirestoreError = null;
+
+    // 4. Assert response is 201 Created and successful
+    assert.equal(res.statusCode, 201, 'Response must be 201 Created');
+    const body = JSON.parse(res.data);
+    assert.equal(body.success, true, 'Scan must succeed');
+    assert.ok(body.scan, 'Response must contain scan record');
+    assert.equal(body.scan.analysis.communityReports, 0, 'Community reports count must default to 0');
+    assert.ok(body.scan.analysis.riskScore !== undefined, 'Risk score must be returned');
+    assert.ok(body.scan.analysis.threatLevel !== undefined, 'Threat level must be returned');
+  });
+
+  // NEW TEST 14: POST /scan handles Firestore timeouts gracefully and prevents unhandled rejection
+  await runTest('POST /scan handles Firestore timeouts gracefully and prevents unhandled rejection', async () => {
+    // 1. Setup mock Firestore to hang indefinitely (never resolving/rejecting)
+    let resolveHangingPromise;
+    const hangingPromise = new Promise((resolve) => {
+      resolveHangingPromise = resolve;
+    });
+
+    const mockHangingCollection = (name) => {
+      return {
+        doc: (docId) => {
+          return {
+            set: async (data) => {
+              await hangingPromise;
+              return {};
+            },
+            get: async () => {
+              await hangingPromise;
+              return {
+                exists: false,
+                data: () => ({})
+              };
+            },
+            update: async (data) => {
+              await hangingPromise;
+              return {};
+            }
+          };
+        },
+        get: async () => {
+          await hangingPromise;
+          return {
+            forEach: (cb) => {}
+          };
+        },
+        where: function() { return this; },
+        orderBy: function() { return this; }
+      };
+    };
+
+    const mockHangingRunTransaction = async (updateFunction) => {
+      await hangingPromise;
+      return {};
+    };
+
+    firebaseConfig.db.collection = mockHangingCollection;
+    firebaseConfig.db.runTransaction = mockHangingRunTransaction;
+
+    // 2. Make scan request
+    const res = await makeRequest({
+      hostname: 'localhost',
+      port: 5999,
+      path: '/scan',
+      method: 'POST',
+      headers: {
+        'Origin': 'https://qr-shield-ai.vercel.app',
+        'Content-Type': 'application/json'
+      }
+    }, {
+      payload: 'https://example-slow.com',
+      city: 'Bhopal',
+      latitude: 23.2599,
+      longitude: 77.4126
+    });
+
+    // 3. Clean up the hanging promises and restore mocks
+    resolveHangingPromise();
+    firebaseConfig.db.collection = mockCollection;
+    firebaseConfig.db.runTransaction = mockRunTransaction;
+
+    // 4. Assertions
+    assert.equal(res.statusCode, 201, 'Response must be 201 Created');
+    const body = JSON.parse(res.data);
+    assert.equal(body.success, true, 'Scan must succeed');
+    assert.equal(body.scan.analysis.communityReports, 0, 'Community reports must default to 0 on timeout');
   });
 
   // Tear down server
