@@ -12,9 +12,6 @@ The project was built and tested during a hackathon, where the team worked throu
 
 **Backend API:** https://qrsheildai.onrender.com
 
-**Backend Health Check:** https://qrsheildai.onrender.com/api/health
-
-> The backend is hosted on Render. On free-tier infrastructure, the first request after inactivity may take additional time while the service starts.
 
 ---
 
@@ -540,18 +537,6 @@ The experience highlighted the value of:
 
 ---
 
-## 👥 Team
-
-**Team Members**
-
-- Ayush Raj — Team Lead, Backend Integration, Risk Engine, Deployment & Debugging
-- Madhav — Presentation, Demo Support & Testing
-- Atul — Police Dashboard Presentation, Research & Testing
-
-> Update the contribution descriptions above if you want them to exactly match each member's work.
-
----
-
 ## 🏆 Hackathon Journey
 
 QR Shield AI was developed and demonstrated during a hackathon focused on solving real-world cybersecurity problems.
@@ -570,12 +555,6 @@ The project did not win the competition, but the development process provided pr
 - Technical presentation
 
 The project continued to be improved after the hackathon based on the technical issues and feedback discovered during the event.
-
----
-
-## 📄 License
-
-This project is licensed under the MIT License.
 
 ---
 
