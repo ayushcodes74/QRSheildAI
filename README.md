@@ -19,7 +19,7 @@ The project was built and tested during a hackathon, where the team worked throu
 
 QR codes are widely used for payments, websites, menus, authentication, and information sharing.
 
-However, users cannot easily inspect the destination or intent of a QR code before opening it.
+However, users cannot easily inspect the destination or intent of a QR code before opening it
 
 Attackers can exploit this behavior through:
 
